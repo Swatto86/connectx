@@ -4,6 +4,10 @@
 
 .titlebar {
   background: transparent;
+  height: 16px;
+  user-select: none;
+  display: flex;
+  justify-content: flex-end;
   -webkit-app-region: drag;
   app-region: drag;
 }

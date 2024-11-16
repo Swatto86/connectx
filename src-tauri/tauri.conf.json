@@ -16,15 +16,18 @@
         "label": "main",
         "width": 400,
         "height": 350,
-        "center": true,
         "resizable": false,
         "title": "ConnectX",
         "url": "index.html",
         "transparent": true,
-        "visible": true,
+        "decorations": false,
+        "visible": false,
         "focus": true,
         "skipTaskbar": false,
-        "alwaysOnTop": false
+        "alwaysOnTop": false,
+        "center": true,
+        "x": null,
+        "y": null
       }
     ],
     "security": {

@@ -21,6 +21,8 @@ use windows::Win32::Foundation::FILETIME;
 use windows::core::{PWSTR, PCWSTR};
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
+use tauri::Manager;
+use std::time::Duration;
 
 #[derive(Deserialize)]
 struct Credentials {
@@ -129,6 +131,19 @@ pub fn run() {
             get_stored_credentials,
             delete_credentials
         ])
+        .setup(|app| {
+            let window = app.get_webview_window("main").unwrap();
+            let window_clone = window.clone();
+            
+            tauri::async_runtime::spawn(async move {
+                std::thread::sleep(Duration::from_millis(100));
+                window_clone.center().unwrap();
+                window_clone.show().unwrap();
+                window_clone.set_focus().unwrap();
+            });
+            
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
