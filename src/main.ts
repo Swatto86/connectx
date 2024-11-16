@@ -214,4 +214,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Add this to your initialization code
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'theme') {
+      // Update theme when it's changed in another window
+      const newTheme = e.newValue || 'dracula';
+      document.documentElement.setAttribute('data-theme', newTheme);
+    }
+  });
 });
