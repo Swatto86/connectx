@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from "@tauri-apps/api/core";
 import { Window } from "@tauri-apps/api/window";
 
 interface StoredCredentials {
