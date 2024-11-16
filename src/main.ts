@@ -80,7 +80,49 @@ async function checkCredentialsExist() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+// Declare the function as a global
+declare global {
+  interface Window {
+    toggleTheme: (themeName: string) => void;
+  }
+}
+
+// Assign the function to window object
+window.toggleTheme = function(themeName: string) {
+  document.documentElement.setAttribute('data-theme', themeName);
+  localStorage.setItem('theme', themeName);
+};
+
+function initializeTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'dracula';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  
+  // Add click handlers for theme menu items
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const themeValue = target.getAttribute('data-theme-value');
+    
+    if (themeValue) {
+      document.documentElement.setAttribute('data-theme', themeValue);
+      localStorage.setItem('theme', themeValue);
+      
+      // Find and close the dropdown by removing focus
+      const dropdownContent = target.closest('.dropdown-content');
+      if (dropdownContent) {
+        (dropdownContent as HTMLElement).blur();
+        // Also blur the parent dropdown
+        const dropdown = dropdownContent.parentElement;
+        if (dropdown) {
+          dropdown.blur();
+        }
+      }
+    }
+  });
+}
+
+// Initialize theme when DOM is loaded
+document.addEventListener("DOMContentLoaded", () => {
+  initializeTheme();
   // Get form elements
   const form = document.querySelector("#login-form") as HTMLFormElement | null;
   const username = document.querySelector(
@@ -115,7 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Check for existing credentials
-  await checkCredentialsExist();
+  checkCredentialsExist();
 
   // Add input listeners
   if (username) {
@@ -133,7 +175,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (username) username.value = "";
         if (password) password.value = "";
         showNotification("Credentials deleted successfully");
-        await checkCredentialsExist();
+        checkCredentialsExist();
         validateForm();
       } catch (err) {
         showNotification("Failed to delete credentials", true);
@@ -160,8 +202,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             password: password?.value,
           },
         });
-        showNotification("Credentials saved successfully");
-        await checkCredentialsExist();
+        
+        // Create and show main application window
+        await invoke("show_main_window");
+        
+        // Close the login window
+        await invoke("close_login_window");
       } catch (err) {
         showNotification("Failed to save credentials", true);
         console.error("Error:", err);

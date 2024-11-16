@@ -13,11 +13,11 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "label": "main",
+        "label": "login",
         "width": 400,
         "height": 350,
         "resizable": false,
-        "title": "ConnectX",
+        "title": "ConnectX Login",
         "url": "index.html",
         "transparent": true,
         "decorations": false,
@@ -25,9 +25,22 @@
         "focus": true,
         "skipTaskbar": false,
         "alwaysOnTop": false,
-        "center": true,
-        "x": null,
-        "y": null
+        "center": true
+      },
+      {
+        "label": "main",
+        "width": 800,
+        "height": 600,
+        "resizable": true,
+        "title": "ConnectX",
+        "url": "main.html",
+        "transparent": false,
+        "decorations": true,
+        "visible": false,
+        "focus": true,
+        "skipTaskbar": false,
+        "alwaysOnTop": false,
+        "center": true
       }
     ],
     "security": {

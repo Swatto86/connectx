@@ -120,6 +120,24 @@ async fn delete_credentials() -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn show_main_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(main_window) = app_handle.get_webview_window("main") {
+        main_window.center().map_err(|e| e.to_string())?;
+        main_window.show().map_err(|e| e.to_string())?;
+        main_window.set_focus().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn close_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("login") {
+        window.close().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -129,10 +147,12 @@ pub fn run() {
             quit_app, 
             save_credentials,
             get_stored_credentials,
-            delete_credentials
+            delete_credentials,
+            show_main_window,
+            close_login_window
         ])
         .setup(|app| {
-            let window = app.get_webview_window("main").unwrap();
+            let window = app.get_webview_window("login").unwrap();
             let window_clone = window.clone();
             
             tauri::async_runtime::spawn(async move {
