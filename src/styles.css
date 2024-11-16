@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.titlebar {
+  background: transparent;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
