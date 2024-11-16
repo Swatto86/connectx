@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Window } from "@tauri-apps/api/window";
 
 interface StoredCredentials {
   username: string;
@@ -24,7 +23,9 @@ function showNotification(message: string, isError: boolean = false) {
 
 // Function to update button states
 function updateButtonStates(hasCredentials: boolean) {
-  const deleteBtn = document.querySelector("#delete-btn") as HTMLButtonElement;
+  const deleteBtn = document.querySelector(
+    "#delete-btn"
+  ) as HTMLButtonElement | null;
   if (deleteBtn) {
     deleteBtn.disabled = !hasCredentials;
     deleteBtn.classList.toggle("opacity-50", !hasCredentials);
@@ -36,9 +37,13 @@ function updateButtonStates(hasCredentials: boolean) {
 function validateForm() {
   const okBtn = document.querySelector(
     'button[type="submit"]'
-  ) as HTMLButtonElement;
-  const username = document.querySelector("#username") as HTMLInputElement;
-  const password = document.querySelector("#password") as HTMLInputElement;
+  ) as HTMLButtonElement | null;
+  const username = document.querySelector(
+    "#username"
+  ) as HTMLInputElement | null;
+  const password = document.querySelector(
+    "#password"
+  ) as HTMLInputElement | null;
 
   if (okBtn && username && password) {
     const isValid =
@@ -57,8 +62,12 @@ async function checkCredentialsExist() {
 
     // If credentials exist, populate the form
     if (stored) {
-      const username = document.querySelector("#username") as HTMLInputElement;
-      const password = document.querySelector("#password") as HTMLInputElement;
+      const username = document.querySelector(
+        "#username"
+      ) as HTMLInputElement | null;
+      const password = document.querySelector(
+        "#password"
+      ) as HTMLInputElement | null;
       if (username && password) {
         username.value = stored.username;
         password.value = stored.password;
@@ -71,76 +80,92 @@ async function checkCredentialsExist() {
   }
 }
 
-// Initialize window
-async function initWindow() {
-  await Window;
-}
-
 document.addEventListener("DOMContentLoaded", async () => {
-  // Initialize window
-  await initWindow();
-
   // Get form elements
-  const form = document.querySelector("#login-form") as HTMLFormElement;
-  const username = document.querySelector("#username") as HTMLInputElement;
-  const password = document.querySelector("#password") as HTMLInputElement;
-  const deleteBtn = document.querySelector("#delete-btn") as HTMLButtonElement;
-  const cancelBtn = document.querySelector("#cancel-btn") as HTMLButtonElement;
+  const form = document.querySelector("#login-form") as HTMLFormElement | null;
+  const username = document.querySelector(
+    "#username"
+  ) as HTMLInputElement | null;
+  const password = document.querySelector(
+    "#password"
+  ) as HTMLInputElement | null;
+  const deleteBtn = document.querySelector(
+    "#delete-btn"
+  ) as HTMLButtonElement | null;
+  const cancelBtn = document.querySelector(
+    "#cancel-btn"
+  ) as HTMLButtonElement | null;
   const okBtn = document.querySelector(
     'button[type="submit"]'
-  ) as HTMLButtonElement;
+  ) as HTMLButtonElement | null;
 
   // Set initial button states
-  okBtn.disabled = true;
-  okBtn.classList.add("opacity-50", "cursor-not-allowed");
-  deleteBtn.disabled = true;
-  deleteBtn.classList.add("opacity-50", "cursor-not-allowed");
+  if (okBtn) {
+    okBtn.disabled = true;
+    okBtn.classList.add("opacity-50", "cursor-not-allowed");
+  }
+  if (deleteBtn) {
+    deleteBtn.disabled = true;
+    deleteBtn.classList.add("opacity-50", "cursor-not-allowed");
+  }
 
   // Set initial focus
-  username.focus();
+  if (username) {
+    username.focus();
+  }
 
   // Check for existing credentials
   await checkCredentialsExist();
 
   // Add input listeners
-  username.addEventListener("input", validateForm);
-  password.addEventListener("input", validateForm);
+  if (username) {
+    username.addEventListener("input", validateForm);
+  }
+  if (password) {
+    password.addEventListener("input", validateForm);
+  }
 
   // Handle delete
-  deleteBtn.addEventListener("click", async () => {
-    try {
-      await invoke("delete_credentials");
-      username.value = "";
-      password.value = "";
-      showNotification("Credentials deleted successfully");
-      await checkCredentialsExist();
-      validateForm();
-    } catch (err) {
-      showNotification("Failed to delete credentials", true);
-      console.error("Error:", err);
-    }
-  });
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", async () => {
+      try {
+        await invoke("delete_credentials");
+        if (username) username.value = "";
+        if (password) password.value = "";
+        showNotification("Credentials deleted successfully");
+        await checkCredentialsExist();
+        validateForm();
+      } catch (err) {
+        showNotification("Failed to delete credentials", true);
+        console.error("Error:", err);
+      }
+    });
+  }
 
   // Handle cancel
-  cancelBtn.addEventListener("click", async () => {
-    await invoke("quit_app");
-  });
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", async () => {
+      await invoke("quit_app");
+    });
+  }
 
   // Handle form submit
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try {
-      await invoke("save_credentials", {
-        credentials: {
-          username: username.value,
-          password: password.value,
-        },
-      });
-      showNotification("Credentials saved successfully");
-      await checkCredentialsExist();
-    } catch (err) {
-      showNotification("Failed to save credentials", true);
-      console.error("Error:", err);
-    }
-  });
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await invoke("save_credentials", {
+          credentials: {
+            username: username?.value,
+            password: password?.value,
+          },
+        });
+        showNotification("Credentials saved successfully");
+        await checkCredentialsExist();
+      } catch (err) {
+        showNotification("Failed to save credentials", true);
+        console.error("Error:", err);
+      }
+    });
+  }
 });
