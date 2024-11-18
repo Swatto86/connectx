@@ -1,8 +1,8 @@
 [package]
 name = "connectx"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "1.0.0"
+description = "An application designed for system administrators to simplify connecting to multiple hosts. It enables you to save and search a list of hosts and associated descriptions for easy connection."
+authors = ["Swatto"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
