@@ -131,9 +131,26 @@ async fn show_main_window(app_handle: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn close_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+async fn hide_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window("login") {
-        window.close().map_err(|e| e.to_string())?;
+        window.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn show_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("login") {
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn hide_main_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("main") {
+        window.hide().map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -149,7 +166,9 @@ pub fn run() {
             get_stored_credentials,
             delete_credentials,
             show_main_window,
-            close_login_window
+            hide_login_window,
+            show_login_window,
+            hide_main_window
         ])
         .setup(|app| {
             let window = app.get_webview_window("login").unwrap();

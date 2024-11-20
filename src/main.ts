@@ -8,17 +8,18 @@ interface StoredCredentials {
 function showNotification(message: string, isError: boolean = false) {
   const notification = document.createElement("div");
   notification.className = `
-        fixed bottom-4 left-1/2 transform -translate-x-1/2
+        fixed bottom-2 left-1/2 transform -translate-x-1/2
         ${isError ? "bg-red-500" : "bg-green-500"}
         text-white px-4 py-2 rounded-md shadow-lg
-        text-center min-w-[200px]
+        text-center min-w-[200px] whitespace-nowrap
+        text-sm
     `;
   notification.textContent = message;
   document.body.appendChild(notification);
 
   setTimeout(() => {
     notification.remove();
-  }, 3000);
+  }, 1000);
 }
 
 // Function to update button states
@@ -203,11 +204,21 @@ document.addEventListener("DOMContentLoaded", () => {
           },
         });
         
-        // Create and show main application window
-        await invoke("show_main_window");
+        // Show success notification immediately after saving
+        showNotification("Credentials saved successfully");
         
-        // Close the login window
-        await invoke("close_login_window");
+        // Enable delete button after successful save
+        if (deleteBtn) {
+          deleteBtn.disabled = false;
+          deleteBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        }
+        
+        // Switch windows after a short delay to ensure notification is seen
+        setTimeout(async () => {
+          await invoke("show_main_window");
+          await invoke("hide_login_window");
+        }, 500);
+        
       } catch (err) {
         showNotification("Failed to save credentials", true);
         console.error("Error:", err);
@@ -223,4 +234,14 @@ document.addEventListener("DOMContentLoaded", () => {
       document.documentElement.setAttribute('data-theme', newTheme);
     }
   });
+
+  // Modify the back button handler to just switch windows without any notifications
+  const backToLogin = document.querySelector("#backToLogin");
+  if (backToLogin) {
+    backToLogin.addEventListener("click", async () => {
+      // Simply switch windows without showing any notifications
+      await invoke("show_login_window");
+      await invoke("hide_main_window");
+    });
+  }
 });
