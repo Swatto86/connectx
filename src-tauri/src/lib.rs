@@ -171,16 +171,41 @@ pub fn run() {
             hide_main_window
         ])
         .setup(|app| {
-            let window = app.get_webview_window("login").unwrap();
-            let window_clone = window.clone();
-            
+            let login_window = app.get_webview_window("login").unwrap();
+            let main_window = app.get_webview_window("main").unwrap();
+            let app_handle = app.app_handle().clone(); // Clone the AppHandle
+
+            let login_window_clone = login_window.clone(); // Clone the login window for async block
             tauri::async_runtime::spawn(async move {
                 std::thread::sleep(Duration::from_millis(100));
-                window_clone.center().unwrap();
-                window_clone.show().unwrap();
-                window_clone.set_focus().unwrap();
+                login_window_clone.center().unwrap();
+                login_window_clone.show().unwrap();
+                login_window_clone.set_focus().unwrap();
             });
-            
+
+            // Listen for the close event on the login window
+            login_window.on_window_event({
+                let app_handle_clone = app_handle.clone();
+                move |event| {
+                    if let tauri::WindowEvent::CloseRequested { .. } = event {
+                        let app_handle_clone = app_handle_clone.clone();
+                        tauri::async_runtime::spawn(async move {
+                            quit_app(app_handle_clone).await; // Await the future
+                        });
+                    }
+                }
+            });
+
+            // Listen for the close event on the main window
+            main_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                    let app_handle_clone = app_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        quit_app(app_handle_clone).await; // Await the future
+                    });
+                }
+            });
+
             Ok(())
         })
         .run(tauri::generate_context!())
