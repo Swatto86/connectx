@@ -330,6 +330,45 @@ fn delete_host(hostname: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to write CSV: {}", e))
 }
 
+#[tauri::command]
+fn search_hosts(query: String) -> Result<Vec<Host>, String> {
+    let hosts = get_hosts()?;
+    
+    if query.is_empty() {
+        return Ok(hosts);
+    }
+
+    let query = query.to_lowercase();
+    let filtered_hosts = hosts.into_iter()
+        .filter(|host| {
+            host.hostname.to_lowercase().contains(&query) ||
+            host.ip_address.to_lowercase().contains(&query) ||
+            host.description.to_lowercase().contains(&query)
+        })
+        .collect();
+
+    Ok(filtered_hosts)
+}
+
+#[tauri::command]
+async fn launch_rdp(host: Host) -> Result<(), String> {
+    use std::process::Command;
+    
+    let address = if host.ip_address.is_empty() {
+        &host.hostname
+    } else {
+        &host.ip_address
+    };
+
+    Command::new("mstsc")
+        .arg("/v:")
+        .arg(address)
+        .spawn()
+        .map_err(|e| format!("Failed to launch RDP: {}", e))?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -488,7 +527,9 @@ pub fn run() {
             get_hosts,
             save_host,
             delete_host,
-            hide_hosts_window
+            hide_hosts_window,
+            search_hosts,
+            launch_rdp
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

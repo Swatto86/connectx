@@ -5,6 +5,12 @@ interface StoredCredentials {
   password: string;
 }
 
+interface Host {
+    hostname: string;
+    ip_address: string;
+    description: string;
+}
+
 function showNotification(message: string, isError: boolean = false) {
   const notification = document.createElement("div");
   notification.className = `
@@ -256,4 +262,82 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error showing hosts window:", err);
     }
   });
+
+  const searchInput = document.getElementById("serverSearch") as HTMLInputElement;
+  const searchButton = document.getElementById("searchButton");
+  const serverList = document.querySelector(".bg-base-200") as HTMLElement;
+
+  let searchTimeout: number;
+
+  async function performSearch() {
+    try {
+      const query = searchInput.value;
+      const results = await invoke<Host[]>("search_hosts", { query });
+      renderSearchResults(results);
+    } catch (error) {
+      console.error("Search failed:", error);
+    }
+  }
+
+  function renderSearchResults(hosts: Host[]) {
+    if (hosts.length === 0) {
+      serverList.innerHTML = `
+        <p class="text-center text-base-content/60 py-4">
+          No matching hosts found
+        </p>
+      `;
+      return;
+    }
+
+    serverList.innerHTML = `
+      <div class="overflow-x-auto">
+        <table class="table w-full">
+          <thead>
+            <tr>
+              <th class="text-center">Hostname</th>
+              <th class="text-center">IP Address</th>
+              <th class="text-center">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${hosts.map(host => `
+              <tr class="hover:bg-base-300 cursor-pointer" data-host='${JSON.stringify(host)}'>
+                <td class="text-center">${host.hostname}</td>
+                <td class="text-center">${host.ip_address}</td>
+                <td class="text-center">${host.description}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Add double-click handlers
+    const rows = serverList.querySelectorAll("tr[data-host]");
+    rows.forEach(row => {
+      row.addEventListener("dblclick", async () => {
+        const host = JSON.parse((row as HTMLElement).dataset.host!);
+        try {
+          await invoke("launch_rdp", { host });
+        } catch (error) {
+          console.error("Failed to launch RDP:", error);
+        }
+      });
+    });
+  }
+
+  // Search input handler with debounce
+  searchInput?.addEventListener("input", () => {
+    window.clearTimeout(searchTimeout);
+    searchTimeout = window.setTimeout(performSearch, 300);
+  });
+
+  // Search button handler
+  searchButton?.addEventListener("click", () => {
+    window.clearTimeout(searchTimeout);
+    performSearch();
+  });
+
+  // Initial search to show all hosts
+  performSearch();
 });

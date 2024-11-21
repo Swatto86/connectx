@@ -146,16 +146,16 @@ window.editHost = (hostname: string) => {
   document.getElementById("modalTitle")!.textContent = "Edit Host";
   
   const form = document.getElementById("hostForm") as HTMLFormElement;
-  (form.elements.namedItem("hostname") as HTMLInputElement).value = host.hostname;
-  (form.elements.namedItem("ip_address") as HTMLInputElement).value = host.ip_address;
-  (form.elements.namedItem("description") as HTMLTextAreaElement).value = host.description;
+  (form.querySelector("#hostname") as HTMLInputElement).value = host.hostname;
+  (form.querySelector("#ipAddress") as HTMLInputElement).value = host.ip_address;
+  (form.querySelector("#description") as HTMLTextAreaElement).value = host.description;
   
   modal.showModal();
 };
 
 declare global {
   interface Window {
-    deleteHost: (hostname: string) => Promise<void>;
     editHost: (hostname: string) => void;
+    deleteHost: (hostname: string) => void;
   }
 }
