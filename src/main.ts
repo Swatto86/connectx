@@ -215,8 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Switch windows after a short delay to ensure notification is seen
         setTimeout(async () => {
-          await invoke("show_main_window");
-          await invoke("hide_login_window");
+          await invoke("switch_to_main_window");
         }, 500);
         
       } catch (err) {
@@ -235,13 +234,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Modify the back button handler to just switch windows without any notifications
+  // Modify the back button handler to properly switch windows
   const backToLogin = document.querySelector("#backToLogin");
   if (backToLogin) {
     backToLogin.addEventListener("click", async () => {
-      // Simply switch windows without showing any notifications
-      await invoke("show_login_window");
-      await invoke("hide_main_window");
+      try {
+        // First show login window, then hide main window
+        await invoke("show_login_window");
+        await invoke("hide_main_window");
+      } catch (err) {
+        console.error("Error switching windows:", err);
+      }
     });
   }
 });

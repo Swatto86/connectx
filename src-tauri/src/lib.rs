@@ -1,9 +1,3 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[tauri::command]
 async fn quit_app(app_handle: tauri::AppHandle) {
     app_handle.exit(0);
@@ -21,8 +15,16 @@ use windows::Win32::Foundation::FILETIME;
 use windows::core::{PWSTR, PCWSTR};
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
-use tauri::Manager;
+use tauri::{
+    Manager,
+    menu::{Menu, MenuItem},
+    tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState},
+};
 use std::time::Duration;
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
+
+static LAST_HIDDEN_WINDOW: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new("login".to_string()));
 
 #[derive(Deserialize)]
 struct Credentials {
@@ -121,29 +123,84 @@ async fn delete_credentials() -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn show_main_window(app_handle: tauri::AppHandle) -> Result<(), String> {
-    if let Some(main_window) = app_handle.get_webview_window("main") {
-        main_window.center().map_err(|e| e.to_string())?;
-        main_window.show().map_err(|e| e.to_string())?;
-        main_window.set_focus().map_err(|e| e.to_string())?;
+async fn toggle_visible_window(app_handle: tauri::AppHandle) -> Result<(), tauri::Error> {
+    let login_window = app_handle.get_webview_window("login").expect("login window exists");
+    let main_window = app_handle.get_webview_window("main").expect("main window exists");
+
+    let login_visible = login_window.is_visible()?;
+    let main_visible = main_window.is_visible()?;
+
+    // First, determine which window should be shown
+    if login_visible {
+        // If login is visible, hide it
+        login_window.hide()?;
+    } else if main_visible {
+        // If main is visible, hide it
+        main_window.hide()?;
+    } else {
+        // If neither is visible, show login window
+        // Make sure main window is hidden first
+        main_window.hide()?;
+        login_window.unminimize()?;  // First unminimize if needed
+        login_window.show()?;        // Then show
+        login_window.set_focus()?;   // Finally bring to front
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn close_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("login") {
+        window.close().map_err(|e| e.to_string())?;
     }
     Ok(())
 }
 
 #[tauri::command]
-async fn hide_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+async fn get_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window("login") {
         window.hide().map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Login window not found".to_string())
     }
-    Ok(())
 }
 
 #[tauri::command]
 async fn show_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app_handle.get_webview_window("login") {
-        window.show().map_err(|e| e.to_string())?;
-        window.set_focus().map_err(|e| e.to_string())?;
+    if let Some(login_window) = app_handle.get_webview_window("login") {
+        // First hide main window if it's visible
+        if let Some(main_window) = app_handle.get_webview_window("main") {
+            main_window.hide().map_err(|e| e.to_string())?;
+        }
+        
+        login_window.unminimize().map_err(|e| e.to_string())?;
+        login_window.show().map_err(|e| e.to_string())?;
+        login_window.set_focus().map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Login window not found".to_string())
     }
+}
+
+#[tauri::command]
+async fn switch_to_main_window(app_handle: tauri::AppHandle) -> Result<(), tauri::Error> {
+    let login_window = app_handle.get_webview_window("login").unwrap();
+    let main_window = app_handle.get_webview_window("main").unwrap();
+
+    // First show main window, then hide login window to prevent flicker
+    main_window.unminimize()?;
+    main_window.show()?;
+    main_window.set_focus()?;
+    
+    // Update LAST_HIDDEN_WINDOW before hiding login window
+    if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+        *last_hidden = "main".to_string();
+    }
+    
+    login_window.hide()?;
+
     Ok(())
 }
 
@@ -151,63 +208,134 @@ async fn show_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
 async fn hide_main_window(app_handle: tauri::AppHandle) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window("main") {
         window.hide().map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Main window not found".to_string())
     }
-    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![
-            greet, 
+        .setup(|app| {
+            // Create menu items
+            let show_item = MenuItem::with_id(app.app_handle(), "show", "Show Window", true, None::<&str>)?;
+            let hide_item = MenuItem::with_id(app.app_handle(), "hide", "Hide Window", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app.app_handle(), "quit", "Quit", true, None::<&str>)?;
+
+            // Create the menu
+            let menu = Menu::with_items(app, &[&quit_item, &show_item, &hide_item])?;
+
+            // Set up close handlers for both windows
+            let login_window = app.get_webview_window("login").unwrap();
+            let main_window = app.get_webview_window("main").unwrap();
+            
+            let app_handle = app.app_handle().clone();
+            login_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                    app_handle.exit(0);
+                }
+            });
+
+            let app_handle = app.app_handle().clone();
+            main_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                    app_handle.exit(0);
+                }
+            });
+
+            // Create the system tray
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .menu_on_left_click(true)
+                .on_tray_icon_event(|tray_handle, event| match event {
+                    TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } => {
+                        let app_handle = tray_handle.app_handle().clone();
+                        tauri::async_runtime::spawn(async move {
+                            if let Err(e) = toggle_visible_window(app_handle).await {
+                                eprintln!("Failed to toggle window visibility: {}", e);
+                            }
+                        });
+                    }
+                    TrayIconEvent::Click {
+                        button: MouseButton::Right,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } => {
+                        // Handle right click if needed
+                    }
+                    _ => () // Silently ignore all other events
+                })
+                .on_menu_event(|app, event| match event.id() {
+                    id if id == "quit" => {
+                        app.exit(0);
+                    }
+                    id if id == "show" => {
+                        if let Ok(window_label) = LAST_HIDDEN_WINDOW.lock() {
+                            if let Some(window) = app.get_webview_window(&window_label) {
+                                let _ = window.unminimize();
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                    id if id == "hide" => {
+                        // Check which window is visible and store its label
+                        let login_window = app.get_webview_window("login");
+                        let main_window = app.get_webview_window("main");
+                        
+                        if let Some(window) = login_window {
+                            if window.is_visible().unwrap_or(false) {
+                                if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+                                    *last_hidden = "login".to_string();
+                                }
+                                let _ = window.hide();
+                            }
+                        }
+                        if let Some(window) = main_window {
+                            if window.is_visible().unwrap_or(false) {
+                                if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+                                    *last_hidden = "main".to_string();
+                                }
+                                let _ = window.hide();
+                            }
+                        }
+                    }
+                    _ => {}
+                })
+                .build(app)
+                .expect("Failed to build tray icon");
+
+            let window = app.get_webview_window("login").unwrap();
+            let window_clone = window.clone();
+            
+            tauri::async_runtime::spawn(async move {
+                std::thread::sleep(Duration::from_millis(100));
+                window_clone.center().unwrap();
+                window_clone.show().unwrap();
+                window_clone.set_focus().unwrap();
+            });
+            
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![ 
             quit_app, 
             save_credentials,
             get_stored_credentials,
             delete_credentials,
-            show_main_window,
-            hide_login_window,
+            toggle_visible_window,
+            close_login_window,
+            get_login_window,
             show_login_window,
+            switch_to_main_window,
             hide_main_window
         ])
-        .setup(|app| {
-            let login_window = app.get_webview_window("login").unwrap();
-            let main_window = app.get_webview_window("main").unwrap();
-            let app_handle = app.app_handle().clone(); // Clone the AppHandle
-
-            let login_window_clone = login_window.clone(); // Clone the login window for async block
-            tauri::async_runtime::spawn(async move {
-                std::thread::sleep(Duration::from_millis(100));
-                login_window_clone.center().unwrap();
-                login_window_clone.show().unwrap();
-                login_window_clone.set_focus().unwrap();
-            });
-
-            // Listen for the close event on the login window
-            login_window.on_window_event({
-                let app_handle_clone = app_handle.clone();
-                move |event| {
-                    if let tauri::WindowEvent::CloseRequested { .. } = event {
-                        let app_handle_clone = app_handle_clone.clone();
-                        tauri::async_runtime::spawn(async move {
-                            quit_app(app_handle_clone).await; // Await the future
-                        });
-                    }
-                }
-            });
-
-            // Listen for the close event on the main window
-            main_window.on_window_event(move |event| {
-                if let tauri::WindowEvent::CloseRequested { .. } = event {
-                    let app_handle_clone = app_handle.clone();
-                    tauri::async_runtime::spawn(async move {
-                        quit_app(app_handle_clone).await; // Await the future
-                    });
-                }
-            });
-
-            Ok(())
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
