@@ -33,18 +33,23 @@ function setupEventListeners() {
 
   document.getElementById("hostForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
+    const hostname = (document.getElementById("hostname") as HTMLInputElement).value;
+    const ipAddress = (document.getElementById("ipAddress") as HTMLInputElement).value;
+    const description = (document.getElementById("description") as HTMLTextAreaElement).value;
     
     const host: Host = {
-      hostname: formData.get("hostname") as string,
-      ipAddress: formData.get("ipAddress") as string,
-      description: formData.get("description") as string,
+      hostname,
+      ipAddress,
+      description,
     };
     
-    await saveHost(host);
-    (document.getElementById("hostModal") as HTMLDialogElement).close();
-    await loadHosts();
+    try {
+      await saveHost(host);
+      (document.getElementById("hostModal") as HTMLDialogElement).close();
+      await loadHosts();
+    } catch (error) {
+      console.error("Failed to save host:", error);
+    }
   });
 
   document.getElementById("backToMain")?.addEventListener("click", async () => {
@@ -54,6 +59,29 @@ function setupEventListeners() {
       console.error("Error hiding hosts window:", err);
     }
   });
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const themeValue = target.getAttribute('data-theme-value');
+    
+    if (themeValue) {
+      document.documentElement.setAttribute('data-theme', themeValue);
+      localStorage.setItem('theme', themeValue);
+      
+      // Close the dropdown
+      const dropdownContent = target.closest('.dropdown-content');
+      if (dropdownContent) {
+        (dropdownContent as HTMLElement).blur();
+        const dropdown = dropdownContent.parentElement;
+        if (dropdown) {
+          dropdown.blur();
+        }
+      }
+    }
+  });
+
+  const savedTheme = localStorage.getItem('theme') || 'dracula';
+  document.documentElement.setAttribute('data-theme', savedTheme);
 }
 
 async function loadHosts() {
