@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 interface Host {
   hostname: string;
-  ipAddress: string;
+  ip_address: string;
   description: string;
 }
 
@@ -33,20 +33,16 @@ function setupEventListeners() {
 
   document.getElementById("hostForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const hostname = (document.getElementById("hostname") as HTMLInputElement).value;
-    const ipAddress = (document.getElementById("ipAddress") as HTMLInputElement).value;
-    const description = (document.getElementById("description") as HTMLTextAreaElement).value;
     
     const host: Host = {
-      hostname,
-      ipAddress,
-      description,
+      hostname: (document.getElementById("hostname") as HTMLInputElement).value,
+      ip_address: (document.getElementById("ipAddress") as HTMLInputElement).value,
+      description: (document.getElementById("description") as HTMLTextAreaElement).value,
     };
     
     try {
       await saveHost(host);
       (document.getElementById("hostModal") as HTMLDialogElement).close();
-      await loadHosts();
     } catch (error) {
       console.error("Failed to save host:", error);
     }
@@ -97,12 +93,23 @@ function renderHosts() {
   const tbody = document.getElementById("hostTableBody");
   if (!tbody) return;
 
+  if (hosts.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" class="text-center text-base-content/60">
+          No hosts found. Add one to get started.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   tbody.innerHTML = hosts.map(host => `
     <tr>
-      <td>${host.hostname}</td>
-      <td>${host.ipAddress}</td>
-      <td>${host.description}</td>
-      <td>
+      <td class="text-center">${host.hostname}</td>
+      <td class="text-center">${host.ip_address}</td>
+      <td class="text-center">${host.description}</td>
+      <td class="text-center">
         <button class="btn btn-sm btn-ghost" onclick="window.editHost('${host.hostname}')">Edit</button>
         <button class="btn btn-sm btn-ghost text-error" onclick="window.deleteHost('${host.hostname}')">Delete</button>
       </td>
@@ -113,8 +120,10 @@ function renderHosts() {
 async function saveHost(host: Host) {
   try {
     await invoke("save_host", { host });
+    await loadHosts();
   } catch (error) {
     console.error("Failed to save host:", error);
+    throw error;
   }
 }
 
@@ -138,7 +147,7 @@ window.editHost = (hostname: string) => {
   
   const form = document.getElementById("hostForm") as HTMLFormElement;
   (form.elements.namedItem("hostname") as HTMLInputElement).value = host.hostname;
-  (form.elements.namedItem("ipAddress") as HTMLInputElement).value = host.ipAddress;
+  (form.elements.namedItem("ip_address") as HTMLInputElement).value = host.ip_address;
   (form.elements.namedItem("description") as HTMLTextAreaElement).value = host.description;
   
   modal.showModal();

@@ -62,13 +62,13 @@
         <table class="table w-full">
           <thead>
             <tr>
-              <th>Hostname</th>
-              <th>IP Address</th>
-              <th>Description</th>
-              <th>Actions</th>
+              <th class="text-center w-[20%]">Hostname</th>
+              <th class="text-center w-[20%]">IP Address</th>
+              <th class="text-center w-[40%]">Description</th>
+              <th class="text-center w-[20%]">Actions</th>
             </tr>
           </thead>
-          <tbody id="hostTableBody">
+          <tbody id="hostTableBody" class="text-center">
             <!-- Hosts will be inserted here dynamically -->
           </tbody>
         </table>
@@ -76,26 +76,26 @@
 
       <!-- Add/Edit Host Modal -->
       <dialog id="hostModal" class="modal">
-        <div class="modal-box">
+        <div class="modal-box mt-24">
           <h3 class="font-bold text-lg mb-4" id="modalTitle">Add Host</h3>
-          <form id="hostForm" class="space-y-4">
+          <form id="hostForm" class="space-y-4" autocomplete="off">
             <div>
               <label class="label">
                 <span class="label-text">Hostname</span>
               </label>
-              <input type="text" id="hostname" class="input input-bordered w-full" required />
+              <input type="text" id="hostname" name="hostname" class="input input-bordered w-full" required autocomplete="off" />
             </div>
             <div>
               <label class="label">
                 <span class="label-text">IP Address</span>
               </label>
-              <input type="text" id="ipAddress" class="input input-bordered w-full" required />
+              <input type="text" id="ipAddress" name="ipAddress" class="input input-bordered w-full" required autocomplete="off" />
             </div>
             <div>
               <label class="label">
                 <span class="label-text">Description</span>
               </label>
-              <textarea id="description" class="textarea textarea-bordered w-full"></textarea>
+              <textarea id="description" name="description" class="textarea textarea-bordered w-full h-24" autocomplete="off"></textarea>
             </div>
             <div class="modal-action">
               <button type="button" class="btn" onclick="hostModal.close()">Cancel</button>

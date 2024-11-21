@@ -234,7 +234,7 @@ async fn show_hosts_window(app_handle: tauri::AppHandle) -> Result<(), String> {
             main_window.hide().map_err(|e| e.to_string())?;
         }
         
-        hosts_window.unminimize().map_err(|e| e.to_string())?;
+        hosts_window.maximize().map_err(|e| e.to_string())?;
         hosts_window.show().map_err(|e| e.to_string())?;
         hosts_window.set_focus().map_err(|e| e.to_string())?;
         Ok(())
@@ -340,8 +340,8 @@ pub fn run() {
             let hide_item = MenuItem::with_id(app.app_handle(), "hide", "Hide Window", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app.app_handle(), "quit", "Quit", true, None::<&str>)?;
 
-            // Create the menu
-            let menu = Menu::with_items(app, &[&quit_item, &show_item, &hide_item])?;
+            // Create the menu with Quit at the bottom
+            let menu = Menu::with_items(app, &[&show_item, &hide_item, &quit_item])?;
 
             // Set up close handlers for both windows
             let login_window = app.get_webview_window("login").unwrap();
