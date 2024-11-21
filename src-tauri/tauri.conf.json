@@ -43,6 +43,23 @@
         "skipTaskbar": false,
         "alwaysOnTop": false,
         "center": true
+      },
+      {
+        "label": "hosts",
+        "width": 600,
+        "height": 500,
+        "minWidth": 600,
+        "minHeight": 500,
+        "resizable": true,
+        "title": "Manage Hosts",
+        "url": "hosts.html",
+        "transparent": false,
+        "decorations": true,
+        "visible": false,
+        "focus": true,
+        "skipTaskbar": false,
+        "alwaysOnTop": false,
+        "center": true
       }
     ],
     "security": {

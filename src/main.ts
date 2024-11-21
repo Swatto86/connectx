@@ -247,4 +247,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Update the manage hosts event listener
+  document.getElementById("manageHosts")?.addEventListener("click", async () => {
+    try {
+      await invoke("show_hosts_window");
+    } catch (err) {
+      console.error("Error showing hosts window:", err);
+    }
+  });
 });

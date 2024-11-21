@@ -38,6 +38,13 @@ struct StoredCredentials {
     password: String,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct Host {
+    hostname: String,
+    ip_address: String,
+    description: String,
+}
+
 #[tauri::command]
 async fn save_credentials(credentials: Credentials) -> Result<(), String> {
     unsafe {
@@ -175,6 +182,11 @@ async fn show_login_window(app_handle: tauri::AppHandle) -> Result<(), String> {
             main_window.hide().map_err(|e| e.to_string())?;
         }
         
+        // Update LAST_HIDDEN_WINDOW to "login"
+        if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+            *last_hidden = "login".to_string();
+        }
+        
         login_window.unminimize().map_err(|e| e.to_string())?;
         login_window.show().map_err(|e| e.to_string())?;
         login_window.set_focus().map_err(|e| e.to_string())?;
@@ -214,6 +226,110 @@ async fn hide_main_window(app_handle: tauri::AppHandle) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+async fn show_hosts_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(hosts_window) = app_handle.get_webview_window("hosts") {
+        // First hide main window
+        if let Some(main_window) = app_handle.get_webview_window("main") {
+            main_window.hide().map_err(|e| e.to_string())?;
+        }
+        
+        hosts_window.unminimize().map_err(|e| e.to_string())?;
+        hosts_window.show().map_err(|e| e.to_string())?;
+        hosts_window.set_focus().map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Hosts window not found".to_string())
+    }
+}
+
+#[tauri::command]
+async fn hide_hosts_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("hosts") {
+        window.hide().map_err(|e| e.to_string())?;
+        
+        // Show main window again and update LAST_HIDDEN_WINDOW
+        if let Some(main_window) = app_handle.get_webview_window("main") {
+            if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+                *last_hidden = "main".to_string();
+            }
+            main_window.show().map_err(|e| e.to_string())?;
+            main_window.set_focus().map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    } else {
+        Err("Hosts window not found".to_string())
+    }
+}
+
+#[tauri::command]
+fn get_hosts() -> Result<Vec<Host>, String> {
+    let path = std::path::Path::new("hosts.csv");
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let contents = std::fs::read_to_string(path)
+        .map_err(|e| format!("Failed to read CSV: {}", e))?;
+
+    let mut hosts = Vec::new();
+    for line in contents.lines().skip(1) { // Skip header
+        let fields: Vec<&str> = line.split(',').collect();
+        if fields.len() >= 3 {
+            hosts.push(Host {
+                hostname: fields[0].to_string(),
+                ip_address: fields[1].to_string(),
+                description: fields[2].to_string(),
+            });
+        }
+    }
+
+    Ok(hosts)
+}
+
+#[tauri::command]
+fn save_host(host: Host) -> Result<(), String> {
+    let mut hosts = get_hosts()?;
+    
+    if let Some(idx) = hosts.iter().position(|h| h.hostname == host.hostname) {
+        hosts[idx] = host;
+    } else {
+        hosts.push(host);
+    }
+
+    let mut output = String::from("hostname,ip_address,description\n");
+    for host in hosts {
+        output.push_str(&format!("{},{},{}\n", 
+            host.hostname, 
+            host.ip_address, 
+            host.description
+        ));
+    }
+
+    std::fs::write("hosts.csv", output)
+        .map_err(|e| format!("Failed to write CSV: {}", e))
+}
+
+#[tauri::command]
+fn delete_host(hostname: String) -> Result<(), String> {
+    let hosts: Vec<Host> = get_hosts()?
+        .into_iter()
+        .filter(|h| h.hostname != hostname)
+        .collect();
+
+    let mut output = String::from("hostname,ip_address,description\n");
+    for host in hosts {
+        output.push_str(&format!("{},{},{}\n", 
+            host.hostname, 
+            host.ip_address, 
+            host.description
+        ));
+    }
+
+    std::fs::write("hosts.csv", output)
+        .map_err(|e| format!("Failed to write CSV: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -230,6 +346,7 @@ pub fn run() {
             // Set up close handlers for both windows
             let login_window = app.get_webview_window("login").unwrap();
             let main_window = app.get_webview_window("main").unwrap();
+            let hosts_window = app.get_webview_window("hosts").unwrap();
             
             let app_handle = app.app_handle().clone();
             login_window.on_window_event(move |event| {
@@ -240,6 +357,13 @@ pub fn run() {
 
             let app_handle = app.app_handle().clone();
             main_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                    app_handle.exit(0);
+                }
+            });
+
+            let app_handle = app.app_handle().clone();
+            hosts_window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { .. } = event {
                     app_handle.exit(0);
                 }
@@ -289,6 +413,7 @@ pub fn run() {
                         // Check which window is visible and store its label
                         let login_window = app.get_webview_window("login");
                         let main_window = app.get_webview_window("main");
+                        let hosts_window = app.get_webview_window("hosts");
                         
                         if let Some(window) = login_window {
                             if window.is_visible().unwrap_or(false) {
@@ -306,6 +431,14 @@ pub fn run() {
                                 let _ = window.hide();
                             }
                         }
+                        if let Some(window) = hosts_window {
+                            if window.is_visible().unwrap_or(false) {
+                                if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+                                    *last_hidden = "hosts".to_string();
+                                }
+                                let _ = window.hide();
+                            }
+                        }
                     }
                     _ => {}
                 })
@@ -313,13 +446,25 @@ pub fn run() {
                 .expect("Failed to build tray icon");
 
             let window = app.get_webview_window("login").unwrap();
+            let main_window = app.get_webview_window("main").unwrap();
+            let hosts_window = app.get_webview_window("hosts").unwrap();
+            
             let window_clone = window.clone();
+            let main_window_clone = main_window.clone();
+            let hosts_window_clone = hosts_window.clone();
             
             tauri::async_runtime::spawn(async move {
                 std::thread::sleep(Duration::from_millis(100));
+                // Center login window
                 window_clone.center().unwrap();
                 window_clone.show().unwrap();
                 window_clone.set_focus().unwrap();
+                
+                // Center main window
+                main_window_clone.center().unwrap();
+                
+                // Center hosts window
+                hosts_window_clone.center().unwrap();
             });
             
             Ok(())
@@ -334,7 +479,16 @@ pub fn run() {
             get_login_window,
             show_login_window,
             switch_to_main_window,
-            hide_main_window
+            hide_main_window,
+            show_hosts_window,
+            get_hosts,
+            save_host,
+            delete_host,
+            show_hosts_window,
+            get_hosts,
+            save_host,
+            delete_host,
+            hide_hosts_window
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

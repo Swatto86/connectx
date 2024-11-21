@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dracula">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Hosts</title>
+    <script type="module" src="/src/hosts.ts" defer></script>
+  </head>
+  <body class="min-h-screen bg-base-100 text-base-content">
+    <div class="fixed bottom-2 right-4 z-50">
+      <div class="dropdown dropdown-top dropdown-end">
+        <button 
+          tabindex="0" 
+          class="btn btn-ghost btn-circle"
+          aria-label="Toggle theme selector"
+          title="Toggle theme"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            class="h-5 w-5" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              stroke-linecap="round" 
+              stroke-linejoin="round" 
+              stroke-width="2" 
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" 
+            />
+          </svg>
+        </button>
+        <div tabindex="0" class="dropdown-content z-[1] shadow-lg bg-base-200 rounded-box w-52">
+          <!-- Theme menu items (same as other windows) -->
+        </div>
+      </div>
+    </div>
+    
+    <main class="container mx-auto p-4">
+      <div class="flex justify-between items-center mb-6">
+        <button id="backToMain" class="btn btn-ghost btn-circle" title="Back to Main">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
+        <h1 class="text-2xl font-bold">Manage Hosts</h1>
+        <div class="space-x-2">
+          <button id="importCsv" class="btn btn-primary">Import CSV</button>
+          <button id="exportCsv" class="btn btn-primary">Export CSV</button>
+          <button id="addHost" class="btn btn-accent">Add Host</button>
+        </div>
+      </div>
+
+      <!-- Host List Table -->
+      <div class="overflow-x-auto bg-base-200 rounded-lg">
+        <table class="table w-full">
+          <thead>
+            <tr>
+              <th>Hostname</th>
+              <th>IP Address</th>
+              <th>Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="hostTableBody">
+            <!-- Hosts will be inserted here dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Add/Edit Host Modal -->
+      <dialog id="hostModal" class="modal">
+        <div class="modal-box">
+          <h3 class="font-bold text-lg mb-4" id="modalTitle">Add Host</h3>
+          <form id="hostForm" class="space-y-4">
+            <div>
+              <label class="label">
+                <span class="label-text">Hostname</span>
+              </label>
+              <input type="text" id="hostname" class="input input-bordered w-full" required />
+            </div>
+            <div>
+              <label class="label">
+                <span class="label-text">IP Address</span>
+              </label>
+              <input type="text" id="ipAddress" class="input input-bordered w-full" required />
+            </div>
+            <div>
+              <label class="label">
+                <span class="label-text">Description</span>
+              </label>
+              <textarea id="description" class="textarea textarea-bordered w-full"></textarea>
+            </div>
+            <div class="modal-action">
+              <button type="button" class="btn" onclick="hostModal.close()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </form>
+        </div>
+      </dialog>
+    </main>
+  </body>
+</html>
