@@ -1,5 +1,5 @@
 [package]
-name = "connectx"
+name = "ConnectX"
 version = "1.0.0"
 description = "An application designed for system administrators to simplify connecting to multiple hosts. It enables you to save and search a list of hosts and associated descriptions for easy connection."
 authors = ["Swatto"]
@@ -28,3 +28,5 @@ windows = { version = "0.52", features = [
     "Win32_System_Memory"
 ] }
 once_cell = "1.18"
+tempfile = "3.2"
+chrono = "0.4"

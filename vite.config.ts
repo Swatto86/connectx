@@ -1,5 +1,12 @@
 import { defineConfig } from "vite";
 
+// Add proper typing for process.env
+declare const process: {
+  env: {
+    TAURI_DEV_HOST?: string;
+  };
+};
+
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
@@ -30,6 +37,7 @@ export default defineConfig(async () => ({
       input: {
         main: "./main.html",
         index: "./index.html",
+        hosts: "./hosts.html"
       },
     },
   },

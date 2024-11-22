@@ -23,6 +23,8 @@ use tauri::{
 use std::time::Duration;
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
+use std::process::Command;
+use chrono::Local;
 
 static LAST_HIDDEN_WINDOW: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new("login".to_string()));
 
@@ -249,9 +251,21 @@ async fn show_hosts_window(app_handle: tauri::AppHandle) -> Result<(), String> {
             main_window.hide().map_err(|e| e.to_string())?;
         }
         
-        hosts_window.maximize().map_err(|e| e.to_string())?;
+        // Make sure login window is also hidden
+        if let Some(login_window) = app_handle.get_webview_window("login") {
+            login_window.hide().map_err(|e| e.to_string())?;
+        }
+        
+        // Now show hosts window
+        hosts_window.unminimize().map_err(|e| e.to_string())?;
         hosts_window.show().map_err(|e| e.to_string())?;
         hosts_window.set_focus().map_err(|e| e.to_string())?;
+        
+        // Update LAST_HIDDEN_WINDOW
+        if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+            *last_hidden = "hosts".to_string();
+        }
+        
         Ok(())
     } else {
         Err("Hosts window not found".to_string())
@@ -346,14 +360,127 @@ fn delete_host(hostname: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn launch_rdp(host: Host) -> Result<(), String> {
-    use std::process::Command;
+    // Get stored credentials
+    let credentials = get_stored_credentials().await?
+        .ok_or("No stored credentials found".to_string())?;
     
+    unsafe {
+        // Convert password to wide string (UTF-16) as Windows expects
+        let password_wide: Vec<u16> = OsStr::new(&credentials.password)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let target_name: Vec<u16> = OsStr::new(&format!("TERMSRV/{}", host.hostname))
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        let username: Vec<u16> = OsStr::new(&credentials.username)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let cred = CREDENTIALW {
+            Flags: CRED_FLAGS(0),
+            Type: CRED_TYPE_GENERIC,
+            TargetName: PWSTR(target_name.as_ptr() as *mut u16),
+            Comment: PWSTR::null(),
+            LastWritten: FILETIME::default(),
+            CredentialBlobSize: (password_wide.len() * 2) as u32,  // Size in bytes (UTF-16 = 2 bytes per char)
+            CredentialBlob: password_wide.as_ptr() as *mut u8,     // Use the wide string version
+            Persist: CRED_PERSIST_LOCAL_MACHINE,
+            AttributeCount: 0,
+            Attributes: std::ptr::null_mut(),
+            TargetAlias: PWSTR::null(),
+            UserName: PWSTR(username.as_ptr() as *mut u16),
+        };
+
+        // For debugging
+        println!("Saving credential for target: TERMSRV/{}", host.hostname);
+        println!("Username length: {}", credentials.username.len());
+        println!("Password length: {}", credentials.password.len());
+
+        match CredWriteW(&cred, 0) {
+            Ok(_) => println!("Successfully saved credential"),
+            Err(e) => return Err(format!("Failed to save RDP credentials: {:?}", e)),
+        }
+    }
+
+    // Create filename with hostname and timestamp
+    let timestamp = Local::now().format("%Y%m%d%H%M%S");
+    let temp_dir = std::env::temp_dir();
+    let rdp_path = temp_dir.join(format!("{}_{}.rdp", host.hostname, timestamp));
+    
+    // Create RDP file content
+    let rdp_content = format!(
+        "screen mode id:i:2\r\n\
+         desktopwidth:i:1920\r\n\
+         desktopheight:i:1080\r\n\
+         session bpp:i:32\r\n\
+         full address:s:{}\r\n\
+         compression:i:1\r\n\
+         keyboardhook:i:2\r\n\
+         audiocapturemode:i:1\r\n\
+         videoplaybackmode:i:1\r\n\
+         connection type:i:2\r\n\
+         networkautodetect:i:1\r\n\
+         bandwidthautodetect:i:1\r\n\
+         enableworkspacereconnect:i:1\r\n\
+         disable wallpaper:i:0\r\n\
+         allow desktop composition:i:0\r\n\
+         allow font smoothing:i:0\r\n\
+         disable full window drag:i:1\r\n\
+         disable menu anims:i:1\r\n\
+         disable themes:i:0\r\n\
+         disable cursor setting:i:0\r\n\
+         bitmapcachepersistenable:i:1\r\n\
+         audiomode:i:0\r\n\
+         redirectprinters:i:1\r\n\
+         redirectcomports:i:0\r\n\
+         redirectsmartcards:i:1\r\n\
+         redirectclipboard:i:1\r\n\
+         redirectposdevices:i:0\r\n\
+         autoreconnection enabled:i:1\r\n\
+         authentication level:i:2\r\n\
+         prompt for credentials:i:0\r\n\
+         negotiate security layer:i:1\r\n\
+         remoteapplicationmode:i:0\r\n\
+         alternate shell:s:\r\n\
+         shell working directory:s:\r\n\
+         gatewayhostname:s:\r\n\
+         gatewayusagemethod:i:4\r\n\
+         gatewaycredentialssource:i:4\r\n\
+         gatewayprofileusagemethod:i:0\r\n\
+         promptcredentialonce:i:1\r\n\
+         use redirection server name:i:0\r\n\
+         rdgiskdcproxy:i:0\r\n\
+         kdcproxyname:s:\r\n\
+         username:s:{}\r\n\
+         domain:s:\r\n\
+         enablecredsspsupport:i:1\r\n\
+         public mode:i:0\r\n\
+         cert ignore:i:1",
+        host.hostname,
+        credentials.username
+    );
+
+    // Write the RDP file
+    std::fs::write(&rdp_path, rdp_content)
+        .map_err(|e| format!("Failed to write RDP file: {}", e))?;
+    
+    // Launch mstsc with the RDP file
     Command::new("mstsc")
-        .arg("/v:")
-        .arg(&host.hostname)
+        .arg(&rdp_path)
         .spawn()
         .map_err(|e| format!("Failed to launch RDP: {}", e))?;
-
+    
+    // Give mstsc time to read the file
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    
+    // Clean up the file
+    std::fs::remove_file(&rdp_path)
+        .map_err(|e| format!("Failed to clean up RDP file: {}", e))?;
+    
     Ok(())
 }
 
