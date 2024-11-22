@@ -61,22 +61,16 @@
         <div class="relative">
           <input 
             type="text" 
-            id="serverSearch" 
-            placeholder="Search servers..." 
+            id="search-input" 
+            placeholder="Search hosts..." 
             class="input input-bordered w-full"
           />
-          <button 
-            id="searchButton"
-            class="btn btn-primary absolute right-2 top-1/2 transform -translate-y-1/2"
-          >
-            Search
-          </button>
         </div>
       </div>
 
-      <!-- Server List -->
-      <div class="bg-base-200 rounded-lg p-4 min-h-[400px]">
-        <p class="text-center text-base-content/60">Search for servers to connect</p>
+      <!-- Add this after your search box -->
+      <div id="server-list" class="bg-base-200 rounded-box p-4">
+        <!-- Results will be rendered here -->
       </div>
 
       <!-- Context Menu (Hidden by default) -->

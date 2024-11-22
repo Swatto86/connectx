@@ -82,6 +82,23 @@ async fn save_credentials(credentials: Credentials) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn search_hosts(query: String) -> Result<Vec<Host>, String> {
+    let hosts = get_hosts()?;
+    let query = query.to_lowercase();
+    
+    let filtered_hosts: Vec<Host> = hosts
+        .into_iter()
+        .filter(|host| {
+            host.hostname.to_lowercase().contains(&query) ||
+            host.ip_address.to_lowercase().contains(&query) ||
+            host.description.to_lowercase().contains(&query)
+        })
+        .collect();
+    
+    Ok(filtered_hosts)
+}
+
+#[tauri::command]
 async fn get_stored_credentials() -> Result<Option<StoredCredentials>, String> {
     unsafe {
         let target_name: Vec<u16> = OsStr::new("ConnectX")
@@ -330,25 +347,7 @@ fn delete_host(hostname: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to write CSV: {}", e))
 }
 
-#[tauri::command]
-fn search_hosts(query: String) -> Result<Vec<Host>, String> {
-    let hosts = get_hosts()?;
-    
-    if query.is_empty() {
-        return Ok(hosts);
-    }
 
-    let query = query.to_lowercase();
-    let filtered_hosts = hosts.into_iter()
-        .filter(|host| {
-            host.hostname.to_lowercase().contains(&query) ||
-            host.ip_address.to_lowercase().contains(&query) ||
-            host.description.to_lowercase().contains(&query)
-        })
-        .collect();
-
-    Ok(filtered_hosts)
-}
 
 #[tauri::command]
 async fn launch_rdp(host: Host) -> Result<(), String> {
@@ -519,10 +518,6 @@ pub fn run() {
             show_login_window,
             switch_to_main_window,
             hide_main_window,
-            show_hosts_window,
-            get_hosts,
-            save_host,
-            delete_host,
             show_hosts_window,
             get_hosts,
             save_host,
