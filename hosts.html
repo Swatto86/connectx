@@ -87,7 +87,6 @@
             <div>
               <label class="label">
                 <span class="label-text">RDP Hostname</span>
-                <span class="label-text-alt text-xs opacity-70">server.domain.com</span>
               </label>
               <input 
                 type="text" 
@@ -96,6 +95,7 @@
                 class="input input-bordered w-full" 
                 required 
                 autocomplete="off"
+                placeholder="server.domain.com"
                 pattern="(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,}"
                 title="Please enter a valid hostname (e.g., server.domain.com)"
               />
@@ -104,7 +104,12 @@
               <label class="label">
                 <span class="label-text">Description</span>
               </label>
-              <textarea id="description" name="description" class="textarea textarea-bordered w-full h-24" autocomplete="off"></textarea>
+              <textarea 
+                id="description" 
+                name="description" 
+                class="textarea textarea-bordered w-full h-24"
+                autocomplete="off"
+              ></textarea>
             </div>
             <div class="modal-action">
               <button type="button" class="btn" onclick="hostModal.close()">Cancel</button>
