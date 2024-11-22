@@ -218,9 +218,22 @@ function initializeSearch() {
     }
 }
 
+function initializeServerList() {
+    const serverList = document.querySelector("#server-list") as HTMLElement;
+    if (serverList) {
+        serverList.innerHTML = `
+            <div class="text-center text-base-content/60 p-4">
+                Search for servers to connect
+            </div>
+        `;
+    }
+}
+
 // Modify the main DOMContentLoaded event listener
 document.addEventListener("DOMContentLoaded", () => {
     initializeTheme();
+    initializeSearch();
+    initializeServerList();
     
     // Get form elements
     const form = document.querySelector("#login-form") as HTMLFormElement | null;
