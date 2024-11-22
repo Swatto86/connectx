@@ -33,8 +33,16 @@ function setupEventListeners() {
   document.getElementById("hostForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     
+    const hostnameInput = document.getElementById("hostname") as HTMLInputElement;
+    const email = hostnameInput.value.trim();
+    
+    if (!isValidEmail(email)) {
+      alert("Please enter a valid connection string in the format: server@domain.com");
+      return;
+    }
+    
     const host: Host = {
-      hostname: (document.getElementById("hostname") as HTMLInputElement).value,
+      hostname: email,
       description: (document.getElementById("description") as HTMLTextAreaElement).value,
     };
     
@@ -145,6 +153,16 @@ window.editHost = (hostname: string) => {
   
   modal.showModal();
 };
+
+function isValidEmail(email: string): boolean {
+  // This regex validates email format:
+  // - Local part can contain letters, numbers, and certain special characters
+  // - Must have @ symbol
+  // - Domain part follows normal domain rules
+  // - TLD must be at least 2 characters
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+  return emailRegex.test(email) && email.length <= 254; // RFC 5321
+}
 
 declare global {
   interface Window {

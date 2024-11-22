@@ -27,7 +27,7 @@
           <table class="table w-full" id="hostsTable">
             <thead>
               <tr>
-                <th class="text-center w-[30%]">Hostname</th>
+                <th class="text-center w-[30%]">Connection String</th>
                 <th class="text-center w-[50%]">Description</th>
                 <th class="text-center w-[20%]">Actions</th>
               </tr>
@@ -81,14 +81,24 @@
       </div>
 
       <dialog id="hostModal" class="modal">
-        <div class="modal-box mt-24">
+        <div class="modal-box mt-24 max-w-2xl w-11/12 resize overflow-auto">
           <h3 class="font-bold text-lg mb-4" id="modalTitle">Add Host</h3>
           <form id="hostForm" class="space-y-4" autocomplete="off">
             <div>
               <label class="label">
-                <span class="label-text">Hostname</span>
+                <span class="label-text">RDP Connection String</span>
+                <span class="label-text-alt text-xs opacity-70">server@domain.com</span>
               </label>
-              <input type="text" id="hostname" name="hostname" class="input input-bordered w-full" required autocomplete="off" />
+              <input 
+                type="email" 
+                id="hostname" 
+                name="hostname" 
+                class="input input-bordered w-full" 
+                required 
+                autocomplete="off"
+                pattern="[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}"
+                title="Please enter a valid hostname (e.g., server@domain.com)"
+              />
             </div>
             <div>
               <label class="label">
