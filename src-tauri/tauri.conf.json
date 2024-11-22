@@ -46,8 +46,8 @@
       },
       {
         "label": "hosts",
-        "width": 1024,
-        "height": 768,
+        "width": 800,
+        "height": 400,
         "minWidth": 600,
         "minHeight": 500,
         "resizable": true,

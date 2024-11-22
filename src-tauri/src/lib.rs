@@ -300,13 +300,21 @@ fn get_hosts() -> Result<Vec<Host>, String> {
         .map_err(|e| format!("Failed to read CSV: {}", e))?;
 
     let mut hosts = Vec::new();
-    for line in contents.lines().skip(1) { // Skip header
-        let fields: Vec<&str> = line.split(',').collect();
-        if fields.len() >= 2 {
-            hosts.push(Host {
-                hostname: fields[0].to_string(),
-                description: fields[1].to_string(),
-            });
+    let mut reader = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_reader(contents.as_bytes());
+
+    for result in reader.records() {
+        match result {
+            Ok(record) => {
+                if record.len() >= 2 {
+                    hosts.push(Host {
+                        hostname: record[0].to_string(),
+                        description: record[1].to_string(),
+                    });
+                }
+            }
+            Err(e) => return Err(format!("Failed to parse CSV record: {}", e)),
         }
     }
 
@@ -323,16 +331,24 @@ fn save_host(host: Host) -> Result<(), String> {
         hosts.push(host);
     }
 
-    let mut output = String::from("hostname,description\n");
+    let mut wtr = csv::WriterBuilder::new()
+        .from_path("hosts.csv")
+        .map_err(|e| format!("Failed to create CSV writer: {}", e))?;
+
+    // Write header
+    wtr.write_record(&["hostname", "description"])
+        .map_err(|e| format!("Failed to write CSV header: {}", e))?;
+
+    // Write records
     for host in hosts {
-        output.push_str(&format!("{},{}\n", 
-            host.hostname, 
-            host.description
-        ));
+        wtr.write_record(&[&host.hostname, &host.description])
+            .map_err(|e| format!("Failed to write CSV record: {}", e))?;
     }
 
-    std::fs::write("hosts.csv", output)
-        .map_err(|e| format!("Failed to write CSV: {}", e))
+    wtr.flush()
+        .map_err(|e| format!("Failed to flush CSV writer: {}", e))?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -342,16 +358,24 @@ fn delete_host(hostname: String) -> Result<(), String> {
         .filter(|h| h.hostname != hostname)
         .collect();
 
-    let mut output = String::from("hostname,description\n");
+    let mut wtr = csv::WriterBuilder::new()
+        .from_path("hosts.csv")
+        .map_err(|e| format!("Failed to create CSV writer: {}", e))?;
+
+    // Write header
+    wtr.write_record(&["hostname", "description"])
+        .map_err(|e| format!("Failed to write CSV header: {}", e))?;
+
+    // Write records
     for host in hosts {
-        output.push_str(&format!("{},{}\n", 
-            host.hostname, 
-            host.description
-        ));
+        wtr.write_record(&[&host.hostname, &host.description])
+            .map_err(|e| format!("Failed to write CSV record: {}", e))?;
     }
 
-    std::fs::write("hosts.csv", output)
-        .map_err(|e| format!("Failed to write CSV: {}", e))
+    wtr.flush()
+        .map_err(|e| format!("Failed to flush CSV writer: {}", e))?;
+
+    Ok(())
 }
 
 
