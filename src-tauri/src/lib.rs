@@ -20,13 +20,11 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState},
 };
-use std::time::Duration;
 use std::sync::Mutex;
-use once_cell::sync::Lazy;
 use std::process::Command;
-use chrono::Local;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-static LAST_HIDDEN_WINDOW: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new("login".to_string()));
+static LAST_HIDDEN_WINDOW: Mutex<String> = Mutex::new(String::new());
 
 #[derive(Deserialize)]
 struct Credentials {
@@ -407,7 +405,10 @@ async fn launch_rdp(host: Host) -> Result<(), String> {
     }
 
     // Create filename with hostname and timestamp
-    let timestamp = Local::now().format("%Y%m%d%H%M%S");
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     let temp_dir = std::env::temp_dir();
     let rdp_path = temp_dir.join(format!("{}_{}.rdp", host.hostname, timestamp));
     
@@ -489,6 +490,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            // Initialize the LAST_HIDDEN_WINDOW
+            if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+                *last_hidden = "login".to_string();
+            }
+            
             // Create menu items
             let show_item = MenuItem::with_id(app.app_handle(), "show", "Show Window", true, None::<&str>)?;
             let hide_item = MenuItem::with_id(app.app_handle(), "hide", "Hide Window", true, None::<&str>)?;
@@ -608,7 +614,7 @@ pub fn run() {
             let hosts_window_clone = hosts_window.clone();
             
             tauri::async_runtime::spawn(async move {
-                std::thread::sleep(Duration::from_millis(100));
+                std::thread::sleep(std::time::Duration::from_millis(100));
                 // Center login window
                 window_clone.center().unwrap();
                 window_clone.show().unwrap();
