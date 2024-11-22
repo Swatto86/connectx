@@ -34,15 +34,15 @@ function setupEventListeners() {
     e.preventDefault();
     
     const hostnameInput = document.getElementById("hostname") as HTMLInputElement;
-    const email = hostnameInput.value.trim();
+    const hostname = hostnameInput.value.trim();
     
-    if (!isValidEmail(email)) {
-      alert("Please enter a valid connection string in the format: server@domain.com");
+    if (!isValidFQDN(hostname)) {
+      alert("Please enter a valid hostname in the format: server.domain.com");
       return;
     }
     
     const host: Host = {
-      hostname: email,
+      hostname: hostname,
       description: (document.getElementById("description") as HTMLTextAreaElement).value,
     };
     
@@ -154,14 +154,16 @@ window.editHost = (hostname: string) => {
   modal.showModal();
 };
 
-function isValidEmail(email: string): boolean {
-  // This regex validates email format:
-  // - Local part can contain letters, numbers, and certain special characters
-  // - Must have @ symbol
-  // - Domain part follows normal domain rules
-  // - TLD must be at least 2 characters
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
-  return emailRegex.test(email) && email.length <= 254; // RFC 5321
+function isValidFQDN(hostname: string): boolean {
+  // This regex validates FQDN format:
+  // - Contains at least one dot
+  // - Only allows letters, numbers, dots, and hyphens
+  // - Doesn't allow consecutive dots
+  // - Doesn't start or end with a dot or hyphen
+  // - Labels are 1-63 characters long
+  // - Total length is 1-253 characters
+  const fqdnRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,}$/;
+  return fqdnRegex.test(hostname) && hostname.length <= 253;
 }
 
 declare global {

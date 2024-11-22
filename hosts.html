@@ -86,18 +86,18 @@
           <form id="hostForm" class="space-y-4" autocomplete="off">
             <div>
               <label class="label">
-                <span class="label-text">RDP Connection String</span>
-                <span class="label-text-alt text-xs opacity-70">server@domain.com</span>
+                <span class="label-text">RDP Hostname</span>
+                <span class="label-text-alt text-xs opacity-70">server.domain.com</span>
               </label>
               <input 
-                type="email" 
+                type="text" 
                 id="hostname" 
                 name="hostname" 
                 class="input input-bordered w-full" 
                 required 
                 autocomplete="off"
-                pattern="[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}"
-                title="Please enter a valid hostname (e.g., server@domain.com)"
+                pattern="(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,}"
+                title="Please enter a valid hostname (e.g., server.domain.com)"
               />
             </div>
             <div>
