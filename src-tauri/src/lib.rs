@@ -41,7 +41,6 @@ struct StoredCredentials {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Host {
     hostname: String,
-    ip_address: String,
     description: String,
 }
 
@@ -90,7 +89,6 @@ async fn search_hosts(query: String) -> Result<Vec<Host>, String> {
         .into_iter()
         .filter(|host| {
             host.hostname.to_lowercase().contains(&query) ||
-            host.ip_address.to_lowercase().contains(&query) ||
             host.description.to_lowercase().contains(&query)
         })
         .collect();
@@ -292,11 +290,10 @@ fn get_hosts() -> Result<Vec<Host>, String> {
     let mut hosts = Vec::new();
     for line in contents.lines().skip(1) { // Skip header
         let fields: Vec<&str> = line.split(',').collect();
-        if fields.len() >= 3 {
+        if fields.len() >= 2 {
             hosts.push(Host {
                 hostname: fields[0].to_string(),
-                ip_address: fields[1].to_string(),
-                description: fields[2].to_string(),
+                description: fields[1].to_string(),
             });
         }
     }
@@ -314,11 +311,10 @@ fn save_host(host: Host) -> Result<(), String> {
         hosts.push(host);
     }
 
-    let mut output = String::from("hostname,ip_address,description\n");
+    let mut output = String::from("hostname,description\n");
     for host in hosts {
-        output.push_str(&format!("{},{},{}\n", 
+        output.push_str(&format!("{},{}\n", 
             host.hostname, 
-            host.ip_address, 
             host.description
         ));
     }
@@ -334,11 +330,10 @@ fn delete_host(hostname: String) -> Result<(), String> {
         .filter(|h| h.hostname != hostname)
         .collect();
 
-    let mut output = String::from("hostname,ip_address,description\n");
+    let mut output = String::from("hostname,description\n");
     for host in hosts {
-        output.push_str(&format!("{},{},{}\n", 
+        output.push_str(&format!("{},{}\n", 
             host.hostname, 
-            host.ip_address, 
             host.description
         ));
     }
@@ -353,15 +348,9 @@ fn delete_host(hostname: String) -> Result<(), String> {
 async fn launch_rdp(host: Host) -> Result<(), String> {
     use std::process::Command;
     
-    let address = if host.ip_address.is_empty() {
-        &host.hostname
-    } else {
-        &host.ip_address
-    };
-
     Command::new("mstsc")
         .arg("/v:")
-        .arg(address)
+        .arg(&host.hostname)
         .spawn()
         .map_err(|e| format!("Failed to launch RDP: {}", e))?;
 

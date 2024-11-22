@@ -7,7 +7,6 @@ interface StoredCredentials {
 
 interface Host {
     hostname: string;
-    ip_address: string;
     description: string;
 }
 
@@ -171,8 +170,7 @@ async function handleSearch() {
             item.innerHTML = `
                 <div class="flex flex-col">
                     <span class="font-medium">${host.hostname}</span>
-                    <span class="text-sm opacity-70">${host.ip_address}</span>
-                    ${host.description ? `<span class="text-xs opacity-50">${host.description}</span>` : ''}
+                    <span class="text-sm opacity-70">${host.description}</span>
                 </div>
                 <button class="connect-btn btn btn-primary btn-sm">
                     Connect

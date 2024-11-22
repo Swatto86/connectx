@@ -2,7 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 
 interface Host {
   hostname: string;
-  ip_address: string;
   description: string;
 }
 
@@ -36,7 +35,6 @@ function setupEventListeners() {
     
     const host: Host = {
       hostname: (document.getElementById("hostname") as HTMLInputElement).value,
-      ip_address: (document.getElementById("ipAddress") as HTMLInputElement).value,
       description: (document.getElementById("description") as HTMLTextAreaElement).value,
     };
     
@@ -90,31 +88,27 @@ async function loadHosts() {
 }
 
 function renderHosts() {
-  const tbody = document.getElementById("hostTableBody");
-  if (!tbody) return;
-
+  const hostsTableWrapper = document.getElementById('hostsTableWrapper')!;
+  const tbody = document.querySelector('#hostsTable tbody')!;
+  const noHostsMessage = document.getElementById('noHostsMessage')!;
+  
   if (hosts.length === 0) {
-    tbody.innerHTML = `
+    hostsTableWrapper.classList.add('hidden');
+    noHostsMessage.classList.remove('hidden');
+  } else {
+    hostsTableWrapper.classList.remove('hidden');
+    noHostsMessage.classList.add('hidden');
+    tbody.innerHTML = hosts.map(host => `
       <tr>
-        <td colspan="4" class="text-center text-base-content/60">
-          No hosts found. Add one to get started.
+        <td class="text-center">${host.hostname}</td>
+        <td class="text-center">${host.description}</td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-ghost" onclick="window.editHost('${host.hostname}')">Edit</button>
+          <button class="btn btn-sm btn-ghost text-error" onclick="window.deleteHost('${host.hostname}')">Delete</button>
         </td>
       </tr>
-    `;
-    return;
+    `).join('');
   }
-
-  tbody.innerHTML = hosts.map(host => `
-    <tr>
-      <td class="text-center">${host.hostname}</td>
-      <td class="text-center">${host.ip_address}</td>
-      <td class="text-center">${host.description}</td>
-      <td class="text-center">
-        <button class="btn btn-sm btn-ghost" onclick="window.editHost('${host.hostname}')">Edit</button>
-        <button class="btn btn-sm btn-ghost text-error" onclick="window.deleteHost('${host.hostname}')">Delete</button>
-      </td>
-    </tr>
-  `).join("");
 }
 
 async function saveHost(host: Host) {
@@ -147,7 +141,6 @@ window.editHost = (hostname: string) => {
   
   const form = document.getElementById("hostForm") as HTMLFormElement;
   (form.querySelector("#hostname") as HTMLInputElement).value = host.hostname;
-  (form.querySelector("#ipAddress") as HTMLInputElement).value = host.ip_address;
   (form.querySelector("#description") as HTMLTextAreaElement).value = host.description;
   
   modal.showModal();

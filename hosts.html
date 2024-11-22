@@ -18,20 +18,25 @@
         </div>
       </div>
 
-      <div class="overflow-x-auto bg-base-200 rounded-lg mb-16">
-        <table class="table w-full">
-          <thead>
-            <tr>
-              <th class="text-center w-[20%]">Hostname</th>
-              <th class="text-center w-[20%]">IP Address</th>
-              <th class="text-center w-[40%]">Description</th>
-              <th class="text-center w-[20%]">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="hostTableBody" class="text-center">
-            <!-- Hosts will be inserted here dynamically -->
-          </tbody>
-        </table>
+      <div id="server-list" class="bg-base-200 rounded-lg p-4 mb-16 overflow-y-auto flex-1 relative">
+        <div id="noHostsMessage" class="hidden absolute inset-0 flex items-center justify-center text-gray-500">
+          No hosts found. Add one to get started.
+        </div>
+        
+        <div id="hostsTableWrapper">
+          <table class="table w-full" id="hostsTable">
+            <thead>
+              <tr>
+                <th class="text-center w-[30%]">Hostname</th>
+                <th class="text-center w-[50%]">Description</th>
+                <th class="text-center w-[20%]">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Table content will be populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="fixed bottom-0 left-0 right-0 h-16 bg-base-100 flex justify-between items-center px-4">
@@ -84,12 +89,6 @@
                 <span class="label-text">Hostname</span>
               </label>
               <input type="text" id="hostname" name="hostname" class="input input-bordered w-full" required autocomplete="off" />
-            </div>
-            <div>
-              <label class="label">
-                <span class="label-text">IP Address</span>
-              </label>
-              <input type="text" id="ipAddress" name="ipAddress" class="input input-bordered w-full" required autocomplete="off" />
             </div>
             <div>
               <label class="label">
