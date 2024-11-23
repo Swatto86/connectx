@@ -28,3 +28,9 @@ windows = { version = "0.52", features = [
     "Win32_System_Memory"
 ] }
 csv = "1.3"
+
+[profile.release]
+opt-level = "z"  # Optimize for size
+lto = true       # Enable Link Time Optimization
+codegen-units = 1 # Reduce codegen units to improve optimization
+panic = "abort"  # Use abort for panics to reduce binary size

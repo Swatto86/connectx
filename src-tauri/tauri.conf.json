@@ -25,7 +25,8 @@
         "focus": true,
         "skipTaskbar": false,
         "alwaysOnTop": false,
-        "center": true
+        "center": true,
+        "devtools": false
       },
       {
         "label": "main",
@@ -42,7 +43,8 @@
         "focus": true,
         "skipTaskbar": false,
         "alwaysOnTop": false,
-        "center": true
+        "center": true,
+        "devtools": false
       },
       {
         "label": "hosts",
@@ -59,7 +61,8 @@
         "focus": true,
         "skipTaskbar": false,
         "alwaysOnTop": false,
-        "center": true
+        "center": true,
+        "devtools": false
       }
     ],
     "security": {

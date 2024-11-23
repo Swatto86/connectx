@@ -28,3 +28,17 @@ dialog::backdrop {
   min-width: 6rem; /* Ensures a consistent width */
   padding: 0.5rem 1rem; /* Adjust padding for better appearance */
 }
+
+#server-list {
+  position: relative;
+}
+
+#noHostsMessage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 100%;
+  pointer-events: none; /* Ensure clicks pass through */
+}
