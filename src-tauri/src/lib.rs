@@ -27,6 +27,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 static LAST_HIDDEN_WINDOW: Mutex<String> = Mutex::new(String::new());
+static HOSTS: Mutex<Vec<Host>> = Mutex::new(Vec::new());
 
 #[derive(Deserialize)]
 struct Credentials {
@@ -607,6 +608,28 @@ async fn scan_domain(app_handle: tauri::AppHandle, _domain: String, server: Stri
     }
 }
 
+fn initialize_hosts() -> Result<(), String> {
+    if let Ok(mut hosts_data) = HOSTS.lock() {
+        match get_hosts() {
+            Ok(loaded_hosts) => {
+                *hosts_data = loaded_hosts;
+                Ok(())
+            },
+            Err(e) => {
+                // If the file doesn't exist, that's okay - we'll start with an empty Vec
+                if !std::path::Path::new("hosts.csv").exists() {
+                    *hosts_data = Vec::new();
+                    Ok(())
+                } else {
+                    Err(format!("Failed to load hosts: {}", e))
+                }
+            }
+        }
+    } else {
+        Err("Failed to acquire hosts lock".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -748,6 +771,11 @@ pub fn run() {
                 // Center hosts window
                 hosts_window_clone.center().unwrap();
             });
+            
+            if let Err(e) = initialize_hosts() {
+                eprintln!("Warning: Failed to initialize hosts: {}", e);
+                log_to_file(&format!("Failed to initialize hosts: {}", e));
+            }
             
             Ok(())
         })
