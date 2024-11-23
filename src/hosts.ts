@@ -5,6 +5,11 @@ interface Host {
   description: string;
 }
 
+interface StoredCredentials {
+  username: string;
+  password: string;
+}
+
 let hosts: Host[] = [];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -163,6 +168,11 @@ function renderHosts() {
         <td class="text-center">${host.hostname}</td>
         <td class="text-center">${host.description || ''}</td>
         <td class="text-center space-x-2">
+          <button class="btn btn-sm btn-ghost" onclick="window.saveHostCredentials('${host.hostname}')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+          </button>
           <button class="btn btn-sm btn-ghost" onclick="window.editHost('${host.hostname}')">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -264,9 +274,73 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   }, 5000);
 }
 
+window.saveHostCredentials = async (hostname: string) => {
+    const host = hosts.find(h => h.hostname === hostname);
+    if (!host) return;
+    
+    try {
+        // Get stored credentials
+        const storedCreds = await invoke<StoredCredentials>("get_host_credentials", { hostname: host.hostname });
+        
+        // Show modal with credentials form
+        const modal = document.getElementById("credentialsModal") as HTMLDialogElement;
+        const hostnameEl = document.getElementById("credentialsHostname")!;
+        const form = document.getElementById("credentialsForm") as HTMLFormElement;
+        const usernameInput = document.getElementById("credUsername") as HTMLInputElement;
+        const passwordInput = document.getElementById("credPassword") as HTMLInputElement;
+        
+        // Set hostname display
+        hostnameEl.textContent = `Host: ${host.hostname}`;
+        
+        // If we have stored credentials, populate them
+        if (storedCreds) {
+            usernameInput.value = storedCreds.username;
+            passwordInput.value = storedCreds.password;
+        } else {
+            // If no stored credentials, try to get default ones
+            const defaultCreds = await invoke<StoredCredentials>("get_stored_credentials");
+            if (defaultCreds) {
+                usernameInput.value = defaultCreds.username;
+                passwordInput.value = defaultCreds.password;
+            } else {
+                form.reset();
+            }
+        }
+
+        // Handle form submission
+        const handleSubmit = async (e: Event) => {
+            e.preventDefault();
+            try {
+                await invoke("save_host_credentials", { 
+                    host,
+                    credentials: {
+                        username: usernameInput.value,
+                        password: passwordInput.value
+                    }
+                });
+                showToast(`Credentials saved for ${hostname}`, 'success');
+                modal.close();
+            } catch (error) {
+                console.error("Failed to save host credentials:", error);
+                showToast(`Failed to save credentials: ${error}`, 'error');
+            }
+        };
+
+        form.removeEventListener('submit', handleSubmit);
+        form.addEventListener('submit', handleSubmit);
+        
+        modal.showModal();
+        
+    } catch (error) {
+        console.error("Failed to manage host credentials:", error);
+        showToast(`Failed to manage credentials: ${error}`, 'error');
+    }
+};
+
 declare global {
   interface Window {
     editHost: (hostname: string) => void;
     deleteHost: (hostname: string) => void;
+    saveHostCredentials: (hostname: string) => void;
   }
 }

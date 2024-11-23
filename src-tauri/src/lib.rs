@@ -630,6 +630,79 @@ fn initialize_hosts() -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+async fn save_host_credentials(host: Host, credentials: Credentials) -> Result<(), String> {
+    unsafe {
+        let password_wide: Vec<u16> = OsStr::new(&credentials.password)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let target_name: Vec<u16> = OsStr::new(&format!("TERMSRV/{}", host.hostname))
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        let username: Vec<u16> = OsStr::new(&credentials.username)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let cred = CREDENTIALW {
+            Flags: CRED_FLAGS(0),
+            Type: CRED_TYPE_GENERIC,
+            TargetName: PWSTR(target_name.as_ptr() as *mut u16),
+            Comment: PWSTR::null(),
+            LastWritten: FILETIME::default(),
+            CredentialBlobSize: (password_wide.len() * 2) as u32,
+            CredentialBlob: password_wide.as_ptr() as *mut u8,
+            Persist: CRED_PERSIST_LOCAL_MACHINE,
+            AttributeCount: 0,
+            Attributes: std::ptr::null_mut(),
+            TargetAlias: PWSTR::null(),
+            UserName: PWSTR(username.as_ptr() as *mut u16),
+        };
+
+        CredWriteW(&cred, 0)
+            .map_err(|e| format!("Failed to save RDP credentials: {:?}", e))?;
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_host_credentials(hostname: String) -> Result<Option<StoredCredentials>, String> {
+    unsafe {
+        let target_name: Vec<u16> = OsStr::new(&format!("TERMSRV/{}", hostname))
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let mut pcred = std::ptr::null_mut();
+        
+        match CredReadW(PCWSTR::from_raw(target_name.as_ptr()), CRED_TYPE_GENERIC, 0, &mut pcred) {
+            Ok(_) => {
+                let cred = &*(pcred as *const CREDENTIALW);
+                let username = if !cred.UserName.is_null() {
+                    PWSTR::from_raw(cred.UserName.0).to_string()
+                        .map_err(|e| format!("Failed to read username: {:?}", e))?
+                } else {
+                    String::new()
+                };
+                
+                let password = String::from_utf8(
+                    std::slice::from_raw_parts(
+                        cred.CredentialBlob, 
+                        cred.CredentialBlobSize as usize
+                    ).to_vec()
+                ).map_err(|e| format!("Failed to read password: {:?}", e))?;
+
+                Ok(Some(StoredCredentials { username, password }))
+            },
+            Err(_) => Ok(None)
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -798,6 +871,8 @@ pub fn run() {
             search_hosts,
             launch_rdp,
             scan_domain,
+            save_host_credentials,
+            get_host_credentials,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

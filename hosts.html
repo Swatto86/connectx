@@ -178,6 +178,60 @@
           </div>
         </div>
       </dialog>
+
+      <dialog id="credentialsModal" class="modal">
+        <div class="modal-backdrop bg-base-200 bg-opacity-50"></div>
+        <div class="modal-box bg-base-100 p-8 rounded-3xl min-w-[500px] max-w-[500px]">
+          <div class="bg-base-100">
+            <h3 class="text-2xl font-bold mb-8">Manage Host Credentials</h3>
+            <p id="credentialsHostname" class="text-lg mb-6"></p>
+            
+            <form id="credentialsForm" autocomplete="off" class="w-full">
+              <div class="form-control w-full mb-4">
+                <label for="credUsername" class="label">
+                  <span class="label-text text-lg">Username</span>
+                </label>
+                <input 
+                  type="text" 
+                  id="credUsername" 
+                  name="credUsername" 
+                  class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
+                  required 
+                />
+              </div>
+
+              <div class="form-control w-full mb-4">
+                <label for="credPassword" class="label">
+                  <span class="label-text text-lg">Password</span>
+                </label>
+                <input 
+                  type="password" 
+                  id="credPassword" 
+                  name="credPassword" 
+                  class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
+                  required 
+                />
+              </div>
+              
+              <div class="flex justify-end gap-6 mt-8">
+                <button 
+                  type="button" 
+                  class="btn btn-ghost btn-lg rounded-xl px-8" 
+                  onclick="credentialsModal.close()"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  class="btn btn-primary btn-lg rounded-xl px-8"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </dialog>
     </main>
   </body>
 </html>
