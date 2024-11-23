@@ -84,6 +84,60 @@ function setupEventListeners() {
 
   const savedTheme = localStorage.getItem('theme') || 'dracula';
   document.documentElement.setAttribute('data-theme', savedTheme);
+
+  document.getElementById("scanDomain")?.addEventListener("click", () => {
+    const modal = document.getElementById("scanDomainModal") as HTMLDialogElement;
+    const form = document.getElementById("scanDomainForm") as HTMLFormElement;
+    form.reset();
+    modal.showModal();
+  });
+
+  document.getElementById("scanDomainForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const domainInput = document.getElementById("domainName") as HTMLInputElement;
+    const submitButton = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    const modal = document.getElementById("scanDomainModal") as HTMLDialogElement;
+    
+    const domain = domainInput.value.trim();
+    
+    if (!isValidDomain(domain)) {
+      showToast("Please enter a valid domain name (e.g., domain.com)", 'error');
+      return;
+    }
+    
+    try {
+      // Update UI to show scanning state
+      submitButton.disabled = true;
+      submitButton.classList.add('btn-disabled');
+      submitButton.innerHTML = `
+        <span class="loading loading-spinner loading-sm"></span>
+        <span class="ml-2">Scanning...</span>
+      `;
+      
+      console.log(`Starting domain scan for: ${domain}`);
+      const result = await invoke<string>("scan_domain", { domain });
+      console.log(`Scan result: ${result}`);
+      
+      // Close the modal
+      modal.close();
+      
+      // Show success message
+      showToast(result, 'success');
+      
+      // Refresh the hosts list
+      await loadHosts();
+      
+    } catch (error) {
+      console.error("Failed to scan domain:", error);
+      showToast(`Failed to scan domain: ${error}`, 'error');
+    } finally {
+      // Reset UI state
+      submitButton.disabled = false;
+      submitButton.classList.remove('btn-disabled');
+      submitButton.innerHTML = 'Scan';
+    }
+  });
 }
 
 async function loadHosts() {
@@ -109,10 +163,18 @@ function renderHosts() {
     tbody.innerHTML = hosts.map(host => `
       <tr>
         <td class="text-center">${host.hostname}</td>
-        <td class="text-center">${host.description}</td>
-        <td class="text-center">
-          <button class="btn btn-sm btn-ghost" onclick="window.editHost('${host.hostname}')">Edit</button>
-          <button class="btn btn-sm btn-ghost text-error" onclick="window.deleteHost('${host.hostname}')">Delete</button>
+        <td class="text-center">${host.description || ''}</td>
+        <td class="text-center space-x-2">
+          <button class="btn btn-sm btn-ghost" onclick="window.editHost('${host.hostname}')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          <button class="btn btn-sm btn-ghost text-error" onclick="window.deleteHost('${host.hostname}')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </td>
       </tr>
     `).join('');
@@ -164,6 +226,26 @@ function isValidFQDN(hostname: string): boolean {
   // - Total length is 1-253 characters
   const fqdnRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,}$/;
   return fqdnRegex.test(hostname) && hostname.length <= 253;
+}
+
+function isValidDomain(domain: string): boolean {
+  const domainRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*$/;
+  return domainRegex.test(domain);
+}
+
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  const toastContainer = document.getElementById('toastContainer')!;
+  const toast = document.createElement('div');
+  toast.className = `alert ${type === 'success' ? 'alert-success' : 'alert-error'} mb-2`;
+  toast.innerHTML = `
+    <span>${message}</span>
+  `;
+  toastContainer.appendChild(toast);
+  
+  // Remove toast after 5 seconds
+  setTimeout(() => {
+    toast.remove();
+  }, 5000);
 }
 
 declare global {

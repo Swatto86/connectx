@@ -12,13 +12,14 @@
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold">Manage Hosts</h1>
         <div class="space-x-2">
-          <button id="importCsv" class="btn btn-primary">Import CSV</button>
-          <button id="exportCsv" class="btn btn-primary">Export CSV</button>
+          <button id="scanDomain" class="btn btn-primary">Scan Domain</button>
           <button id="addHost" class="btn btn-accent">Add Host</button>
         </div>
       </div>
 
       <div id="server-list" class="bg-base-200 rounded-lg p-4 mb-16 overflow-y-auto flex-1 relative">
+        <div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
+        
         <div id="noHostsMessage" class="hidden absolute inset-0 flex items-center justify-center text-gray-500">
           No hosts found. Add one to get started.
         </div>
@@ -81,18 +82,19 @@
       </div>
 
       <dialog id="hostModal" class="modal">
-        <div class="modal-box mt-24 max-w-2xl w-11/12 resize overflow-auto">
-          <h3 class="font-bold text-lg mb-4" id="modalTitle">Add Host</h3>
-          <form id="hostForm" class="space-y-4" autocomplete="off">
-            <div>
+        <div class="modal-backdrop bg-base-200 bg-opacity-50"></div>
+        <div class="modal-box max-w-2xl w-11/12 bg-base-100 shadow-xl p-8 rounded-2xl border border-base-300">
+          <h3 id="modalTitle" class="font-bold text-xl mb-12">Add Host</h3>
+          <form id="hostForm" class="space-y-12" autocomplete="off">
+            <div class="space-y-4">
               <label class="label">
-                <span class="label-text">RDP Hostname</span>
+                <span class="label-text text-base">RDP Hostname</span>
               </label>
               <input 
                 type="text" 
                 id="hostname" 
                 name="hostname" 
-                class="input input-bordered w-full" 
+                class="input input-bordered w-full rounded-xl py-6" 
                 required 
                 autocomplete="off"
                 placeholder="server.domain.com"
@@ -100,22 +102,63 @@
                 title="Please enter a valid hostname (e.g., server.domain.com)"
               />
             </div>
-            <div>
+            <div class="space-y-4">
               <label class="label">
-                <span class="label-text">Description</span>
+                <span class="label-text text-base">Description</span>
               </label>
               <textarea 
                 id="description" 
                 name="description" 
-                class="textarea textarea-bordered w-full h-24"
+                class="textarea textarea-bordered w-full h-32 rounded-xl"
                 autocomplete="off"
               ></textarea>
             </div>
-            <div class="modal-action">
-              <button type="button" class="btn" onclick="hostModal.close()">Cancel</button>
-              <button type="submit" class="btn btn-primary">Save</button>
+            <div class="modal-action pt-8">
+              <button type="button" class="btn btn-ghost rounded-xl px-8" onclick="hostModal.close()">Cancel</button>
+              <button type="submit" class="btn btn-primary rounded-xl px-8">Save</button>
             </div>
           </form>
+        </div>
+      </dialog>
+
+      <dialog id="scanDomainModal" class="modal">
+        <div class="modal-backdrop bg-base-200 bg-opacity-50"></div>
+        <div class="modal-box bg-base-100 p-8 rounded-3xl min-w-[500px] max-w-[500px]">
+          <div class="bg-base-100">
+            <h3 class="text-2xl font-bold mb-8">Scan Domain</h3>
+            
+            <form id="scanDomainForm" autocomplete="off" class="w-full">
+              <div class="form-control w-full mb-8">
+                <label for="domainName" class="label">
+                  <span class="label-text text-lg">Domain Name</span>
+                </label>
+                <input 
+                  type="text" 
+                  id="domainName" 
+                  name="domainName" 
+                  class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
+                  required 
+                  placeholder="domain.com"
+                />
+              </div>
+              
+              <div class="flex justify-end gap-6 mt-8">
+                <button 
+                  type="button" 
+                  class="btn btn-ghost btn-lg rounded-xl px-8" 
+                  onclick="scanDomainModal.close()"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  class="btn btn-primary btn-lg rounded-xl px-8"
+                >
+                  Scan
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </dialog>
     </main>
