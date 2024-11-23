@@ -550,8 +550,16 @@ fn log_to_file(message: &str) {
 }
 
 #[tauri::command]
-async fn scan_domain(_domain: String, server: String) -> Result<String, String> {
-    // PowerShell command to get Windows Servers directly in CSV format
+async fn scan_domain(app_handle: tauri::AppHandle, _domain: String, server: String) -> Result<String, String> {
+    // Get the hosts window and set it to always on top temporarily
+    let hosts_window = app_handle.get_webview_window("hosts")
+        .ok_or("Failed to get hosts window".to_string())?;
+    
+    // Set window to always on top
+    hosts_window.set_always_on_top(true)
+        .map_err(|_| "Failed to set window always on top".to_string())?;
+
+    // Your existing PowerShell command code here
     let ps_command = format!(
         "Import-Module ActiveDirectory; \
          Get-ADComputer -Server '{}' -Filter 'OperatingSystem -like \"*Windows Server*\"' -Properties DNSHostName,Description,OperatingSystem | \
@@ -561,8 +569,7 @@ async fn scan_domain(_domain: String, server: String) -> Result<String, String> 
         server
     );
 
-    // Execute PowerShell command with hidden window
-    let output = Command::new("powershell")
+    let result = Command::new("powershell")
         .args([
             "-WindowStyle", 
             "Hidden", 
@@ -572,23 +579,31 @@ async fn scan_domain(_domain: String, server: String) -> Result<String, String> 
             &ps_command
         ])
         .output()
-        .map_err(|e| format!("Failed to execute PowerShell command: {}", e))?;
+        .map_err(|e| format!("Failed to execute PowerShell command: {}", e));
 
-    if !output.status.success() {
-        let error = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Failed to scan domain. Error: {}", error));
-    }
+    // Reset always on top after command completes
+    let _ = hosts_window.set_always_on_top(false);
 
-    // Count the number of servers by reading the CSV file
-    let found_servers = match std::fs::read_to_string("hosts.csv") {
-        Ok(contents) => contents.lines().count().saturating_sub(1), // Subtract 1 for header
-        Err(_) => 0
-    };
+    // Return the result
+    match result {
+        Ok(output) => {
+            if !output.status.success() {
+                let error = String::from_utf8_lossy(&output.stderr);
+                return Err(format!("Failed to scan domain. Error: {}", error));
+            }
 
-    if found_servers == 0 {
-        Err("No Windows Servers found in the domain.".to_string())
-    } else {
-        Ok(format!("Successfully found {} Windows Server(s).", found_servers))
+            let found_servers = match std::fs::read_to_string("hosts.csv") {
+                Ok(contents) => contents.lines().count().saturating_sub(1),
+                Err(_) => 0
+            };
+
+            if found_servers == 0 {
+                Err("No Windows Servers found in the domain.".to_string())
+            } else {
+                Ok(format!("Successfully found {} Windows Server(s).", found_servers))
+            }
+        },
+        Err(e) => Err(e)
     }
 }
 
