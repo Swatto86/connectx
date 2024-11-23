@@ -23,7 +23,6 @@ use tauri::{
 use std::sync::Mutex;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
-use ldap3::{LdapConn, Scope, SearchEntry};
 use std::fs::OpenOptions;
 use std::io::Write;
 
@@ -326,8 +325,27 @@ fn get_hosts() -> Result<Vec<Host>, String> {
 
 #[tauri::command]
 fn save_host(host: Host) -> Result<(), String> {
+    // Create hosts.csv if it doesn't exist
+    if !std::path::Path::new("hosts.csv").exists() {
+        let mut wtr = csv::WriterBuilder::new()
+            .from_path("hosts.csv")
+            .map_err(|e| format!("Failed to create hosts.csv: {}", e))?;
+        
+        wtr.write_record(&["hostname", "description"])
+            .map_err(|e| format!("Failed to write CSV header: {}", e))?;
+        
+        wtr.flush()
+            .map_err(|e| format!("Failed to flush CSV writer: {}", e))?;
+    }
+
     let mut hosts = get_hosts()?;
     
+    // Check if hostname is empty or invalid
+    if host.hostname.trim().is_empty() {
+        return Err("Hostname cannot be empty".to_string());
+    }
+    
+    // Update or add the host
     if let Some(idx) = hosts.iter().position(|h| h.hostname == host.hostname) {
         hosts[idx] = host;
     } else {
@@ -344,6 +362,7 @@ fn save_host(host: Host) -> Result<(), String> {
 
     // Write records
     for host in hosts {
+        log_to_file(&format!("Writing host to CSV: {} - {}", host.hostname, host.description));
         wtr.write_record(&[&host.hostname, &host.description])
             .map_err(|e| format!("Failed to write CSV record: {}", e))?;
     }
@@ -531,134 +550,45 @@ fn log_to_file(message: &str) {
 }
 
 #[tauri::command]
-async fn scan_domain(domain: String) -> Result<String, String> {
-    log_to_file(&format!("Starting domain scan for: {}", domain));
-    
-    // Get stored credentials
-    let credentials = match get_stored_credentials().await {
-        Ok(Some(creds)) => {
-            log_to_file("Successfully retrieved stored credentials");
-            creds
-        },
-        Ok(None) => {
-            log_to_file("No stored credentials found");
-            return Err("No stored credentials found. Please login first.".to_string());
-        },
-        Err(e) => {
-            log_to_file(&format!("Error retrieving credentials: {}", e));
-            return Err(format!("Failed to retrieve credentials: {}", e));
-        }
-    };
-    
-    // Convert domain to LDAP URL
-    let ldap_url = format!("ldap://{}:389", domain);
-    log_to_file(&format!("Attempting to connect to LDAP server: {}", ldap_url));
-    
-    // Connect to LDAP server
-    let mut ldap = match LdapConn::new(&ldap_url) {
-        Ok(conn) => {
-            log_to_file("Successfully connected to LDAP server");
-            conn
-        },
-        Err(e) => {
-            log_to_file(&format!("Failed to connect to LDAP server: {}", e));
-            return Err(format!("Failed to connect to LDAP server: {}. Please verify the domain name and network connectivity.", e));
-        }
-    };
+async fn scan_domain(_domain: String, server: String) -> Result<String, String> {
+    // PowerShell command to get Windows Servers directly in CSV format
+    let ps_command = format!(
+        "Import-Module ActiveDirectory; \
+         Get-ADComputer -Server '{}' -Filter 'OperatingSystem -like \"*Windows Server*\"' -Properties DNSHostName,Description,OperatingSystem | \
+         Where-Object {{$_.DNSHostName}} | \
+         Select-Object @{{Name='hostname';Expression={{$_.DNSHostName}}}}, @{{Name='description';Expression={{$_.Description}}}} | \
+         Export-Csv -Path 'hosts.csv' -NoTypeInformation -Force",
+        server
+    );
 
-    // Format username if domain not included
-    let bind_dn = if !credentials.username.contains('@') {
-        format!("{}@{}", credentials.username, domain)
-    } else {
-        credentials.username
-    };
-    log_to_file(&format!("Attempting to bind with DN: {}", bind_dn));
+    // Execute PowerShell command with hidden window
+    let output = Command::new("powershell")
+        .args([
+            "-WindowStyle", 
+            "Hidden", 
+            "-NoProfile", 
+            "-NonInteractive", 
+            "-Command", 
+            &ps_command
+        ])
+        .output()
+        .map_err(|e| format!("Failed to execute PowerShell command: {}", e))?;
 
-    // Bind to LDAP
-    match ldap.simple_bind(&bind_dn, &credentials.password) {
-        Ok(_) => log_to_file("Successfully bound to LDAP server"),
-        Err(e) => {
-            log_to_file(&format!("Authentication failed: {}", e));
-            return Err(format!("Authentication failed: {}. Please verify your credentials.", e));
-        }
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to scan domain. Error: {}", error));
     }
 
-    let base_dn = domain
-        .split('.')
-        .map(|part| format!("DC={}", part))
-        .collect::<Vec<_>>()
-        .join(",");
-    log_to_file(&format!("Using base DN: {}", base_dn));
-
-    let filter = "(&(objectClass=computer)(operatingSystem=*Windows Server*))";
-    log_to_file(&format!("Using LDAP filter: {}", filter));
-
-    let (results, _) = match ldap.search(&base_dn, Scope::Subtree, filter, vec!["dNSHostName", "description", "operatingSystem"]) {
-        Ok(res) => match res.success() {
-            Ok(r) => {
-                log_to_file("Search completed successfully");
-                r
-            },
-            Err(e) => {
-                log_to_file(&format!("Search operation failed: {}", e));
-                return Err(format!("Search operation failed: {}", e));
-            }
-        },
-        Err(e) => {
-            log_to_file(&format!("LDAP search failed: {}", e));
-            return Err(format!("LDAP search failed: {}", e));
-        }
+    // Count the number of servers by reading the CSV file
+    let found_servers = match std::fs::read_to_string("hosts.csv") {
+        Ok(contents) => contents.lines().count().saturating_sub(1), // Subtract 1 for header
+        Err(_) => 0
     };
-
-    let mut found_servers = 0;
-    let mut failed_entries = 0;
-
-    for entry in results {
-        let entry = SearchEntry::construct(entry);
-        log_to_file(&format!("Processing entry: {:?}", entry));
-        
-        if let Some(hostname) = entry.attrs.get("dNSHostName").and_then(|h| h.first()) {
-            let description = entry
-                .attrs
-                .get("description")
-                .and_then(|d| d.first())
-                .unwrap_or(&String::new())
-                .to_string();
-
-            let host = Host {
-                hostname: hostname.to_string(),
-                description,
-            };
-
-            match save_host(host) {
-                Ok(_) => {
-                    found_servers += 1;
-                    log_to_file(&format!("Successfully saved host: {}", hostname));
-                },
-                Err(_) => {
-                    failed_entries += 1;
-                    log_to_file(&format!("Failed to save host: {}", hostname));
-                }
-            }
-        }
-    }
-
-    log_to_file(&format!("Scan completed. Found {} servers, {} failed to save", found_servers, failed_entries));
-
-    match ldap.unbind() {
-        Ok(_) => log_to_file("Successfully unbound from LDAP server"),
-        Err(e) => log_to_file(&format!("Failed to unbind from LDAP: {}", e)),
-    }
 
     if found_servers == 0 {
-        log_to_file("No Windows Servers found in the domain");
         Err("No Windows Servers found in the domain.".to_string())
     } else {
-        let message = format!("Successfully found {} Windows Server(s). {} entries failed to save.", 
-            found_servers, 
-            failed_entries);
-        log_to_file(&message);
-        Ok(message)
+        Ok(format!("Successfully found {} Windows Server(s).", found_servers))
     }
 }
 

@@ -96,18 +96,24 @@ function setupEventListeners() {
     e.preventDefault();
     
     const domainInput = document.getElementById("domainName") as HTMLInputElement;
+    const serverInput = document.getElementById("serverName") as HTMLInputElement;
     const submitButton = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
     const modal = document.getElementById("scanDomainModal") as HTMLDialogElement;
     
     const domain = domainInput.value.trim();
+    const server = serverInput.value.trim();
     
     if (!isValidDomain(domain)) {
       showToast("Please enter a valid domain name (e.g., domain.com)", 'error');
       return;
     }
+
+    if (!isValidServerName(server, domain)) {
+      showToast(`Server must be a valid FQDN ending with .${domain}`, 'error');
+      return;
+    }
     
     try {
-      // Update UI to show scanning state
       submitButton.disabled = true;
       submitButton.classList.add('btn-disabled');
       submitButton.innerHTML = `
@@ -115,24 +121,16 @@ function setupEventListeners() {
         <span class="ml-2">Scanning...</span>
       `;
       
-      console.log(`Starting domain scan for: ${domain}`);
-      const result = await invoke<string>("scan_domain", { domain });
-      console.log(`Scan result: ${result}`);
+      const result = await invoke<string>("scan_domain", { domain, server });
       
-      // Close the modal
       modal.close();
-      
-      // Show success message
       showToast(result, 'success');
-      
-      // Refresh the hosts list
       await loadHosts();
       
     } catch (error) {
       console.error("Failed to scan domain:", error);
       showToast(`Failed to scan domain: ${error}`, 'error');
     } finally {
-      // Reset UI state
       submitButton.disabled = false;
       submitButton.classList.remove('btn-disabled');
       submitButton.innerHTML = 'Scan';
@@ -229,8 +227,26 @@ function isValidFQDN(hostname: string): boolean {
 }
 
 function isValidDomain(domain: string): boolean {
-  const domainRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*$/;
+  // Basic domain validation: letters, numbers, dots, hyphens
+  const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9](\.[a-zA-Z]{2,})+$/;
   return domainRegex.test(domain);
+}
+
+function isValidServerName(server: string, domain: string): boolean {
+  // Server must be FQDN and end with the domain
+  if (!isValidDomain(domain)) return false;
+  
+  // Convert both to lowercase for comparison
+  const serverLower = server.toLowerCase();
+  const domainLower = domain.toLowerCase();
+  
+  // Check if server ends with the domain
+  if (!serverLower.endsWith(domainLower)) return false;
+  
+  // Check if server has a valid hostname prefix
+  const prefix = serverLower.slice(0, -domainLower.length - 1); // Remove domain and dot
+  const hostnameRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+  return hostnameRegex.test(prefix);
 }
 
 function showToast(message: string, type: 'success' | 'error' = 'success') {

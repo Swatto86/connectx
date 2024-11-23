@@ -128,7 +128,7 @@
             <h3 class="text-2xl font-bold mb-8">Scan Domain</h3>
             
             <form id="scanDomainForm" autocomplete="off" class="w-full">
-              <div class="form-control w-full mb-8">
+              <div class="form-control w-full mb-4">
                 <label for="domainName" class="label">
                   <span class="label-text text-lg">Domain Name</span>
                 </label>
@@ -139,6 +139,23 @@
                   class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
                   required 
                   placeholder="domain.com"
+                  pattern="^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9](\.[a-zA-Z]{2,})+$"
+                  title="Please enter a valid domain name (e.g., domain.com)"
+                />
+              </div>
+
+              <div class="form-control w-full mb-4">
+                <label for="serverName" class="label">
+                  <span class="label-text text-lg">Domain Controller</span>
+                </label>
+                <input 
+                  type="text" 
+                  id="serverName" 
+                  name="serverName" 
+                  class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
+                  required 
+                  placeholder="dc01.domain.com"
+                  title="Please enter a valid FQDN matching the domain above"
                 />
               </div>
               
