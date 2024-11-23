@@ -153,18 +153,15 @@ async function loadHosts() {
 }
 
 function renderHosts() {
-  const hostsTableWrapper = document.getElementById('hostsTableWrapper')!;
   const tbody = document.querySelector('#hostsTable tbody')!;
   const noHostsMessage = document.getElementById('noHostsMessage')!;
   
   if (hosts.length === 0) {
-    hostsTableWrapper.classList.add('hidden');
     noHostsMessage.classList.remove('hidden');
   } else {
-    hostsTableWrapper.classList.remove('hidden');
     noHostsMessage.classList.add('hidden');
     tbody.innerHTML = hosts.map(host => `
-      <tr>
+      <tr class="border-b border-base-300">
         <td class="text-center">${host.hostname}</td>
         <td class="text-center">${host.description || ''}</td>
         <td class="text-center space-x-2">

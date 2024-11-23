@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="/src/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Manage Hosts</title>
+    <title>ConnectX</title>
     <script type="module" src="/src/hosts.ts" defer></script>
   </head>
   <body class="min-h-screen bg-base-100 text-base-content">
     <main class="p-4 flex flex-col h-screen">
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Manage Hosts</h1>
+        <h1 class="text-2xl font-bold">Manage Server List</h1>
         <div class="space-x-2">
           <button id="scanDomain" class="btn btn-primary">Scan Domain</button>
           <button id="addHost" class="btn btn-accent">Add Host</button>
@@ -26,7 +26,7 @@
         
         <div id="hostsTableWrapper">
           <table class="table w-full" id="hostsTable">
-            <thead>
+            <thead class="border-b border-base-300">
               <tr>
                 <th class="text-center w-[30%]">Connection String</th>
                 <th class="text-center w-[50%]">Description</th>
@@ -84,8 +84,8 @@
       <dialog id="hostModal" class="modal">
         <div class="modal-backdrop bg-base-200 bg-opacity-50"></div>
         <div class="modal-box max-w-2xl w-11/12 bg-base-100 shadow-xl p-8 rounded-2xl border border-base-300">
-          <h3 id="modalTitle" class="font-bold text-xl mb-12">Add Host</h3>
-          <form id="hostForm" class="space-y-12" autocomplete="off">
+          <h3 id="modalTitle" class="text-2xl font-bold mb-8 text-center">Edit Host</h3>
+          <form id="hostForm" class="space-y-6" autocomplete="off">
             <div class="space-y-4">
               <label class="label">
                 <span class="label-text text-base">RDP Hostname</span>
@@ -98,11 +98,9 @@
                 required 
                 autocomplete="off"
                 placeholder="server.domain.com"
-                pattern="(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,}"
-                title="Please enter a valid hostname (e.g., server.domain.com)"
               />
             </div>
-            <div class="space-y-4">
+            <div class="space-y-4 mb-6">
               <label class="label">
                 <span class="label-text text-base">Description</span>
               </label>
@@ -113,9 +111,9 @@
                 autocomplete="off"
               ></textarea>
             </div>
-            <div class="modal-action pt-8">
-              <button type="button" class="btn btn-ghost rounded-xl px-8" onclick="hostModal.close()">Cancel</button>
-              <button type="submit" class="btn btn-primary rounded-xl px-8">Save</button>
+            <div class="modal-action pt-4 flex justify-between">
+              <button type="button" class="btn btn-circle w-24" onclick="hostModal.close()">Cancel</button>
+              <button type="submit" class="btn btn-primary rounded-xl w-24" tabindex="3">Save</button>
             </div>
           </form>
         </div>
@@ -124,112 +122,80 @@
       <dialog id="scanDomainModal" class="modal">
         <div class="modal-backdrop bg-base-200 bg-opacity-50"></div>
         <div class="modal-box bg-base-100 p-8 rounded-3xl min-w-[500px] max-w-[500px]">
-          <div class="bg-base-100">
-            <h3 class="text-2xl font-bold mb-8">Scan Domain</h3>
-            
-            <form id="scanDomainForm" autocomplete="off" class="w-full">
-              <div class="form-control w-full mb-4">
-                <label for="domainName" class="label">
-                  <span class="label-text text-lg">Domain Name</span>
-                </label>
-                <input 
-                  type="text" 
-                  id="domainName" 
-                  name="domainName" 
-                  class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
-                  required 
-                  placeholder="domain.com"
-                  pattern="^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9](\.[a-zA-Z]{2,})+$"
-                  title="Please enter a valid domain name (e.g., domain.com)"
-                />
-              </div>
-
-              <div class="form-control w-full mb-4">
-                <label for="serverName" class="label">
-                  <span class="label-text text-lg">Domain Controller</span>
-                </label>
-                <input 
-                  type="text" 
-                  id="serverName" 
-                  name="serverName" 
-                  class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
-                  required 
-                  placeholder="dc01.domain.com"
-                  title="Please enter a valid FQDN matching the domain above"
-                />
-              </div>
-              
-              <div class="flex justify-end gap-6 mt-8">
-                <button 
-                  type="button" 
-                  class="btn btn-ghost btn-lg rounded-xl px-8" 
-                  onclick="scanDomainModal.close()"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  class="btn btn-primary btn-lg rounded-xl px-8"
-                >
-                  Scan
-                </button>
-              </div>
-            </form>
-          </div>
+          <h3 class="text-2xl font-bold mb-8 text-center">Scan Domain</h3>
+          <form id="scanDomainForm" autocomplete="off" class="space-y-6">
+            <div class="form-control w-full mb-4">
+              <label for="domainName" class="label">
+                <span class="label-text text-lg">Domain Name</span>
+              </label>
+              <input 
+                type="text" 
+                id="domainName" 
+                name="domainName" 
+                class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
+                required 
+                placeholder="domain.com"
+                pattern="^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9](\.[a-zA-Z]{2,})+$"
+                title="Please enter a valid domain name (e.g., domain.com)"
+              />
+            </div>
+            <div class="form-control w-full mb-4">
+              <label for="serverName" class="label">
+                <span class="label-text text-lg">Domain Controller</span>
+              </label>
+              <input 
+                type="text" 
+                id="serverName" 
+                name="serverName" 
+                class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
+                required 
+                placeholder="dc01.domain.com"
+                title="Please enter a valid FQDN matching the domain above"
+              />
+            </div>
+            <div class="modal-action pt-4 flex justify-between">
+              <button type="button" class="btn btn-circle w-24" onclick="scanDomainModal.close()">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-lg rounded-xl w-24" tabindex="3">Scan</button>
+            </div>
+          </form>
         </div>
       </dialog>
 
       <dialog id="credentialsModal" class="modal">
         <div class="modal-backdrop bg-base-200 bg-opacity-50"></div>
         <div class="modal-box bg-base-100 p-8 rounded-3xl min-w-[500px] max-w-[500px]">
-          <div class="bg-base-100">
-            <h3 class="text-2xl font-bold mb-8">Manage Host Credentials</h3>
-            <p id="credentialsHostname" class="text-lg mb-6"></p>
-            
-            <form id="credentialsForm" autocomplete="off" class="w-full">
-              <div class="form-control w-full mb-4">
-                <label for="credUsername" class="label">
-                  <span class="label-text text-lg">Username</span>
-                </label>
-                <input 
-                  type="text" 
-                  id="credUsername" 
-                  name="credUsername" 
-                  class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
-                  required 
-                />
-              </div>
-
-              <div class="form-control w-full mb-4">
-                <label for="credPassword" class="label">
-                  <span class="label-text text-lg">Password</span>
-                </label>
-                <input 
-                  type="password" 
-                  id="credPassword" 
-                  name="credPassword" 
-                  class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
-                  required 
-                />
-              </div>
-              
-              <div class="flex justify-end gap-6 mt-8">
-                <button 
-                  type="button" 
-                  class="btn btn-ghost btn-lg rounded-xl px-8" 
-                  onclick="credentialsModal.close()"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  class="btn btn-primary btn-lg rounded-xl px-8"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
-          </div>
+          <h3 class="text-2xl font-bold mb-8 text-center">Edit Credentials</h3>
+          <p id="credentialsHostname" class="text-lg mb-6 text-center"></p>
+          <form id="credentialsForm" autocomplete="off" class="space-y-6">
+            <div class="form-control w-full mb-4">
+              <label for="credUsername" class="label">
+                <span class="label-text text-lg">Username</span>
+              </label>
+              <input 
+                type="text" 
+                id="credUsername" 
+                name="credUsername" 
+                class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
+                required 
+              />
+            </div>
+            <div class="form-control w-full mb-4">
+              <label for="credPassword" class="label">
+                <span class="label-text text-lg">Password</span>
+              </label>
+              <input 
+                type="password" 
+                id="credPassword" 
+                name="credPassword" 
+                class="input input-bordered w-full h-14 rounded-2xl text-lg px-6" 
+                required 
+              />
+            </div>
+            <div class="modal-action pt-4 flex justify-between">
+              <button type="button" class="btn btn-circle w-24" onclick="credentialsModal.close()">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-lg rounded-xl w-24" tabindex="3">Save</button>
+            </div>
+          </form>
         </div>
       </dialog>
     </main>
