@@ -141,6 +141,8 @@ function setupEventListeners() {
       submitButton.innerHTML = 'Scan';
     }
   });
+
+  document.getElementById("deleteAllHosts")?.addEventListener("click", deleteAllHosts);
 }
 
 async function loadHosts() {
@@ -333,6 +335,19 @@ window.saveHostCredentials = async (hostname: string) => {
         showToast(`Failed to manage credentials: ${error}`, 'error');
     }
 };
+
+async function deleteAllHosts() {
+  if (!confirm("Are you sure you want to delete all hosts? This action cannot be undone.")) return;
+  
+  try {
+    await invoke("delete_all_hosts");
+    await loadHosts();
+    showToast("All hosts deleted successfully", 'success');
+  } catch (error) {
+    console.error("Failed to delete all hosts:", error);
+    showToast(`Failed to delete all hosts: ${error}`, 'error');
+  }
+}
 
 declare global {
   interface Window {

@@ -703,6 +703,14 @@ async fn get_host_credentials(hostname: String) -> Result<Option<StoredCredentia
     }
 }
 
+#[tauri::command]
+async fn delete_all_hosts() -> Result<(), String> {
+    // Create empty file to clear all contents
+    std::fs::write("hosts.csv", "hostname,description\n")
+        .map_err(|e| format!("Failed to clear hosts file: {}", e))?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -873,6 +881,7 @@ pub fn run() {
             scan_domain,
             save_host_credentials,
             get_host_credentials,
+            delete_all_hosts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
