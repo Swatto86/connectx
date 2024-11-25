@@ -722,12 +722,10 @@ pub fn run() {
             }
             
             // Create menu items
-            let show_item = MenuItem::with_id(app.app_handle(), "show", "Show Window", true, None::<&str>)?;
-            let hide_item = MenuItem::with_id(app.app_handle(), "hide", "Hide Window", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app.app_handle(), "quit", "Quit", true, None::<&str>)?;
 
-            // Create the menu with Quit at the bottom
-            let menu = Menu::with_items(app, &[&show_item, &hide_item, &quit_item])?;
+            // Create the menu with only Quit
+            let menu = Menu::with_items(app, &[&quit_item])?;
 
             // Set up close handlers for both windows
             let login_window = app.get_webview_window("login").unwrap();
@@ -759,7 +757,7 @@ pub fn run() {
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
-                .menu_on_left_click(true)
+                .menu_on_left_click(false)
                 .on_tray_icon_event(|tray_handle, event| match event {
                     TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -767,64 +765,35 @@ pub fn run() {
                         ..
                     } => {
                         let app_handle = tray_handle.app_handle().clone();
-                        tauri::async_runtime::spawn(async move {
-                            if let Err(e) = toggle_visible_window(app_handle).await {
-                                eprintln!("Failed to toggle window visibility: {}", e);
+                        if let Ok(window_label) = LAST_HIDDEN_WINDOW.lock() {
+                            if let Some(window) = app_handle.get_webview_window(&window_label) {
+                                tauri::async_runtime::spawn(async move {
+                                    if let Ok(is_visible) = window.is_visible() {
+                                        if is_visible {
+                                            let _ = window.hide();
+                                        } else {
+                                            let _ = window.unminimize();
+                                            let _ = window.show();
+                                            let _ = window.set_focus();
+                                        }
+                                    }
+                                });
                             }
-                        });
+                        }
                     }
                     TrayIconEvent::Click {
                         button: MouseButton::Right,
                         button_state: MouseButtonState::Up,
                         ..
                     } => {
-                        // Handle right click if needed
+                        // Right-click will automatically show the menu since we set menu_on_left_click(false)
+                        // No need to explicitly show the menu
                     }
-                    _ => () // Silently ignore all other events
+                    _ => ()
                 })
                 .on_menu_event(|app, event| match event.id() {
                     id if id == "quit" => {
                         app.exit(0);
-                    }
-                    id if id == "show" => {
-                        if let Ok(window_label) = LAST_HIDDEN_WINDOW.lock() {
-                            if let Some(window) = app.get_webview_window(&window_label) {
-                                let _ = window.unminimize();
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
-                    }
-                    id if id == "hide" => {
-                        // Check which window is visible and store its label
-                        let login_window = app.get_webview_window("login");
-                        let main_window = app.get_webview_window("main");
-                        let hosts_window = app.get_webview_window("hosts");
-                        
-                        if let Some(window) = login_window {
-                            if window.is_visible().unwrap_or(false) {
-                                if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
-                                    *last_hidden = "login".to_string();
-                                }
-                                let _ = window.hide();
-                            }
-                        }
-                        if let Some(window) = main_window {
-                            if window.is_visible().unwrap_or(false) {
-                                if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
-                                    *last_hidden = "main".to_string();
-                                }
-                                let _ = window.hide();
-                            }
-                        }
-                        if let Some(window) = hosts_window {
-                            if window.is_visible().unwrap_or(false) {
-                                if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
-                                    *last_hidden = "hosts".to_string();
-                                }
-                                let _ = window.hide();
-                            }
-                        }
                     }
                     _ => {}
                 })
