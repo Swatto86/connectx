@@ -735,21 +735,30 @@ pub fn run() {
             let app_handle = app.app_handle().clone();
             login_window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { .. } = event {
-                    app_handle.exit(0);
+                    if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+                        *last_hidden = "login".to_string();
+                    }
+                    let _ = app_handle.get_webview_window("login").unwrap().hide();
                 }
             });
 
             let app_handle = app.app_handle().clone();
             main_window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { .. } = event {
-                    app_handle.exit(0);
+                    if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+                        *last_hidden = "main".to_string();
+                    }
+                    let _ = app_handle.get_webview_window("main").unwrap().hide();
                 }
             });
 
             let app_handle = app.app_handle().clone();
             hosts_window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { .. } = event {
-                    app_handle.exit(0);
+                    if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
+                        *last_hidden = "hosts".to_string();
+                    }
+                    let _ = app_handle.get_webview_window("hosts").unwrap().hide();
                 }
             });
 
