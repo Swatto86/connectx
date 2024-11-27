@@ -727,38 +727,46 @@ pub fn run() {
             // Create the menu with only Quit
             let menu = Menu::with_items(app, &[&quit_item])?;
 
-            // Set up close handlers for both windows
-            let login_window = app.get_webview_window("login").unwrap();
-            let main_window = app.get_webview_window("main").unwrap();
-            let hosts_window = app.get_webview_window("hosts").unwrap();
-            
+            // Set up close handlers for all windows
             let app_handle = app.app_handle().clone();
+            let login_window = app.get_webview_window("login").unwrap();
             login_window.on_window_event(move |event| {
-                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    println!("Close requested for login window");
                     if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
                         *last_hidden = "login".to_string();
                     }
                     let _ = app_handle.get_webview_window("login").unwrap().hide();
+                    // Prevent the window from being destroyed
+                    api.prevent_close();
                 }
             });
 
             let app_handle = app.app_handle().clone();
+            let main_window = app.get_webview_window("main").unwrap();
             main_window.on_window_event(move |event| {
-                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    println!("Close requested for main window");
                     if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
                         *last_hidden = "main".to_string();
                     }
                     let _ = app_handle.get_webview_window("main").unwrap().hide();
+                    // Prevent the window from being destroyed
+                    api.prevent_close();
                 }
             });
 
             let app_handle = app.app_handle().clone();
+            let hosts_window = app.get_webview_window("hosts").unwrap();
             hosts_window.on_window_event(move |event| {
-                if let tauri::WindowEvent::CloseRequested { .. } = event {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    println!("Close requested for hosts window");
                     if let Ok(mut last_hidden) = LAST_HIDDEN_WINDOW.lock() {
                         *last_hidden = "hosts".to_string();
                     }
                     let _ = app_handle.get_webview_window("hosts").unwrap().hide();
+                    // Prevent the window from being destroyed
+                    api.prevent_close();
                 }
             });
 
@@ -767,38 +775,74 @@ pub fn run() {
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .menu_on_left_click(false)
-                .on_tray_icon_event(|tray_handle, event| match event {
-                    TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } => {
-                        let app_handle = tray_handle.app_handle().clone();
-                        if let Ok(window_label) = LAST_HIDDEN_WINDOW.lock() {
-                            if let Some(window) = app_handle.get_webview_window(&window_label) {
-                                tauri::async_runtime::spawn(async move {
-                                    if let Ok(is_visible) = window.is_visible() {
-                                        if is_visible {
-                                            let _ = window.hide();
-                                        } else {
-                                            let _ = window.unminimize();
-                                            let _ = window.show();
-                                            let _ = window.set_focus();
-                                        }
+                .on_tray_icon_event(|tray_handle, event| {
+                    match event {
+                        TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state,
+                            ..
+                        } => {
+                            println!("Left click detected on system tray icon with state: {:?}", button_state);
+                            // Only handle the Down state to prevent double-triggering
+                            if button_state == MouseButtonState::Down {
+                                let app_handle = tray_handle.app_handle().clone();
+                                
+                                if let Ok(window_label) = LAST_HIDDEN_WINDOW.lock() {
+                                    println!("Last hidden window: {}", window_label);
+                                    
+                                    let window = app_handle.get_webview_window(&window_label)
+                                        .or_else(|| app_handle.get_webview_window("login"))
+                                        .or_else(|| app_handle.get_webview_window("main"))
+                                        .or_else(|| app_handle.get_webview_window("hosts"));
+                                    
+                                    if let Some(window) = window {
+                                        println!("Found window: {}", window.label());
+                                        
+                                        tauri::async_runtime::spawn(async move {
+                                            match window.is_visible() {
+                                                Ok(is_visible) => {
+                                                    println!("Window visibility status: {}", is_visible);
+                                                    if is_visible {
+                                                        println!("Attempting to hide window");
+                                                        if let Err(e) = window.hide() {
+                                                            println!("Error hiding window: {:?}", e);
+                                                        } else {
+                                                            println!("Window hidden successfully");
+                                                        }
+                                                    } else {
+                                                        println!("Attempting to show window");
+                                                        if let Err(e) = window.unminimize() {
+                                                            println!("Error unminimizing window: {:?}", e);
+                                                        }
+                                                        if let Err(e) = window.show() {
+                                                            println!("Error showing window: {:?}", e);
+                                                        }
+                                                        if let Err(e) = window.set_focus() {
+                                                            println!("Error setting focus: {:?}", e);
+                                                        }
+                                                        println!("Window show sequence completed");
+                                                    }
+                                                }
+                                                Err(e) => println!("Error checking window visibility: {:?}", e),
+                                            }
+                                        });
+                                    } else {
+                                        println!("No windows found at all!");
                                     }
-                                });
+                                } else {
+                                    println!("Failed to acquire LAST_HIDDEN_WINDOW lock");
+                                }
                             }
                         }
+                        TrayIconEvent::Click {
+                            button: MouseButton::Right,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } => {
+                            println!("Right click detected on system tray icon");
+                        }
+                        _ => {}
                     }
-                    TrayIconEvent::Click {
-                        button: MouseButton::Right,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } => {
-                        // Right-click will automatically show the menu since we set menu_on_left_click(false)
-                        // No need to explicitly show the menu
-                    }
-                    _ => ()
                 })
                 .on_menu_event(|app, event| match event.id() {
                     id if id == "quit" => {
