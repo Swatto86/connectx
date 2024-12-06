@@ -21,6 +21,15 @@
       <div id="server-list" class="bg-base-200 rounded-lg p-4 mb-16 overflow-y-auto flex-1 relative">
         <div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
         
+        <div class="mb-4">
+          <input 
+            type="text" 
+            id="hostSearch" 
+            class="input input-bordered w-full max-w-xs" 
+            placeholder="Search hosts..."
+          />
+        </div>
+
         <div id="noHostsMessage" class="hidden absolute inset-0 flex items-center justify-center text-gray-500">
           No hosts found. Add one to get started.
         </div>

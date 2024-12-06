@@ -11,6 +11,7 @@ interface StoredCredentials {
 }
 
 let hosts: Host[] = [];
+let filteredHosts: Host[] = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   loadHosts();
@@ -143,11 +144,30 @@ function setupEventListeners() {
   });
 
   document.getElementById("deleteAllHosts")?.addEventListener("click", deleteAllHosts);
+
+  // Add search input event listener
+  document.getElementById("hostSearch")?.addEventListener("input", (e) => {
+    const searchTerm = (e.target as HTMLInputElement).value.toLowerCase();
+    filterHosts(searchTerm);
+  });
+}
+
+function filterHosts(searchTerm: string) {
+  if (!searchTerm) {
+    filteredHosts = [...hosts];
+  } else {
+    filteredHosts = hosts.filter(host => 
+      host.hostname.toLowerCase().includes(searchTerm) ||
+      host.description.toLowerCase().includes(searchTerm)
+    );
+  }
+  renderHosts();
 }
 
 async function loadHosts() {
   try {
     hosts = await invoke<Host[]>("get_hosts");
+    filteredHosts = [...hosts];
     renderHosts();
   } catch (error) {
     console.error("Failed to load hosts:", error);
@@ -157,12 +177,20 @@ async function loadHosts() {
 function renderHosts() {
   const tbody = document.querySelector('#hostsTable tbody')!;
   const noHostsMessage = document.getElementById('noHostsMessage')!;
+  const hostsTableWrapper = document.getElementById('hostsTableWrapper')!;
   
-  if (hosts.length === 0) {
+  if (filteredHosts.length === 0) {
+    if (hosts.length === 0) {
+      noHostsMessage.textContent = "No hosts found. Add some hosts to get started!";
+    } else {
+      noHostsMessage.textContent = "No hosts match your search criteria.";
+    }
     noHostsMessage.classList.remove('hidden');
+    hostsTableWrapper.classList.add('hidden');
   } else {
     noHostsMessage.classList.add('hidden');
-    tbody.innerHTML = hosts.map(host => `
+    hostsTableWrapper.classList.remove('hidden');
+    tbody.innerHTML = filteredHosts.map(host => `
       <tr class="border-b border-base-300">
         <td class="text-center">${host.hostname}</td>
         <td class="text-center">${host.description || ''}</td>
